@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add("Ad Blocking Stats")
             popup.menu.add("User Scripts")
             popup.setOnMenuItemClickListener { item ->
-                when (item.title) {
+                when (item.title.toString()) {
                     "New Tab" -> viewModel.openNewTab()
                     "Desktop Site" -> toggleDesktopMode()
                     "Share" -> shareCurrentUrl()
@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
                 popup.menu.add("Scripts")
             }
             popup.setOnMenuItemClickListener { item ->
-                when(item.title) {
+                when(item.title.toString()) {
                     "Copy Cookies" -> copyCurrentCookies()
                     "Website info" -> com.google.android.material.snackbar.Snackbar.make(binding.root, "Site Secure via HTTPS", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
                     "General Settings" -> {
@@ -297,10 +297,12 @@ class MainActivity : AppCompatActivity() {
         val wv = currentWebView ?: return
         val isDesktop = wv.settings.userAgentString.contains("X11")
         if (isDesktop) {
+            // Switch to mobile mode
             wv.settings.userAgentString = wv.settings.userAgentString
                 .replace("X11; Linux x86_64", "Linux; Android 13; Pixel 7")
                 .replace("Chrome/", "Mobile Chrome/")
         } else {
+            // Switch to desktop mode
             wv.settings.userAgentString = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         }
         wv.reload()
