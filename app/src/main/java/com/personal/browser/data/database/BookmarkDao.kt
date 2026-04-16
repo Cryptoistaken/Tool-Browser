@@ -13,11 +13,11 @@ interface BookmarkDao {
     suspend fun getBookmarkByUrl(url: String): Bookmark?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(bookmark: Bookmark)
+    suspend fun insert(bookmark: Bookmark): Long
 
     @Delete
-    suspend fun delete(bookmark: Bookmark)
+    suspend fun delete(bookmark: Bookmark): Int
 
     @Query("DELETE FROM bookmarks WHERE url = :url")
-    suspend fun deleteByUrl(url: String)
+    suspend fun deleteByUrl(url: String): Int
 }

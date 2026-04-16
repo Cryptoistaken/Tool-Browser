@@ -13,11 +13,11 @@ interface HistoryDao {
     suspend fun search(query: String): List<HistoryEntry>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entry: HistoryEntry)
+    suspend fun insert(entry: HistoryEntry): Long
 
     @Query("DELETE FROM history")
-    suspend fun clearAll()
+    suspend fun clearAll(): Int
 
     @Query("DELETE FROM history WHERE visitedAt < :before")
-    suspend fun deleteOlderThan(before: Long)
+    suspend fun deleteOlderThan(before: Long): Int
 }
