@@ -34,7 +34,7 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle-
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --build-cache --parallel --info --stacktrace -Dkapt.verbose=true -Dorg.gradle.jvmargs="-Xmx3g"
+        run: ./gradlew assembleDebug --no-daemon --build-cache --info --stacktrace -Dkapt.verbose=true -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -70,7 +70,7 @@ jobs:
           restore-keys: ${{ runner.os }}-gradle-
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon --build-cache --parallel --info --stacktrace -Dkapt.verbose=true -Dorg.gradle.jvmargs="-Xmx3g"
+        run: ./gradlew assembleRelease --no-daemon --build-cache --info --stacktrace -Dkapt.verbose=true -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
