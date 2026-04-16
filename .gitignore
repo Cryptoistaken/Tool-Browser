@@ -1,23 +1,17 @@
-```
-# Dependencies
-.gradle/
-build/
-target/
-
-# Logs and temp files
-*.log
-*.tmp
-
-# Environment
-.env
-.env.local
-*.env.*
-
-# Editors
-.vscode/
-.idea/
-
-# OS generated files
+*.iml
+.gradle
+/local.properties
+/.idea
 .DS_Store
-Thumbs.db
-```
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/release/
+*.jks
+*.keystore
+*.log
+/app/build
+/app/.cxx
+build_output.txt
