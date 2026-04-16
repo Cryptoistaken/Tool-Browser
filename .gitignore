@@ -11,3 +11,7 @@ local.properties
 app/release/
 *.jks
 *.keystore
+*.log
+/app/build
+/app/.cxx
+build_output.txt
