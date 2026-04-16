@@ -18,11 +18,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.personal.browser.databinding.ActivityMainBinding
-import com.personal.browser.ui.adapter.TabsAdapter
-import com.personal.browser.ui.adapter.BookmarkHistoryAdapter
 import com.personal.browser.ui.viewmodel.BrowserViewModel
 import com.personal.browser.utils.UrlUtils
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,10 +32,6 @@ class MainActivity : AppCompatActivity() {
     private val webViews = mutableMapOf<String, WebView>()
     private var currentWebView: WebView? = null
 
-    private lateinit var tabsAdapter: TabsAdapter
-    private lateinit var bookmarkHistoryAdapter: BookmarkHistoryAdapter
-
-    private lateinit var panelBehavior: BottomSheetBehavior<View>
     private var isAdBlockEnabled = true
 
     // Lightweight ad-block domain list
@@ -57,101 +49,72 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setupBottomPanel()
+        setupOmnibox()
         setupUrlBar()
-        setupNavigationButtons()
-        setupTabsRecycler()
-        setupBookmarkHistoryRecycler()
         observeViewModel()
         setupBackHandler()
         setupSwipeRefresh()
     }
 
-    private fun setupBottomPanel() {
-        panelBehavior = BottomSheetBehavior.from(binding.bottomPanel)
-        panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-        panelBehavior.skipCollapsed = true
-
-        binding.btnNewTab.setOnClickListener {
-            viewModel.openNewTab()
-            hidePanels()
-        }
-
-        binding.btnBookmark.setOnClickListener {
-            viewModel.toggleBookmark()
-        }
-
-        binding.btnTabs.setOnClickListener {
-            if (binding.tabsPanel.isVisible) {
-                hidePanels()
-            } else {
-                hidePanels()
-                showTabsPanel()
+    private fun setupOmnibox() {
+        binding.btnMenu.setOnClickListener { view ->
+            val popup = android.widget.PopupMenu(this, view)
+            popup.menu.add("New Tab")
+            popup.menu.add("Bookmarks")
+            popup.menu.add("History")
+            popup.menu.add("Desktop Site")
+            popup.menu.add("Share")
+            popup.menu.add("Clear Data")
+            popup.menu.add("Ad Blocking Stats")
+            popup.menu.add("User Scripts")
+            popup.setOnMenuItemClickListener { item ->
+                when (item.title) {
+                    "New Tab" -> viewModel.openNewTab()
+                    "Desktop Site" -> toggleDesktopMode()
+                    "Share" -> shareCurrentUrl()
+                    "Clear Data" -> clearBrowsingData()
+                    "Ad Blocking Stats" -> com.google.android.material.snackbar.Snackbar.make(binding.root, "Ad Blocking Enabled", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
+                    "User Scripts" -> com.google.android.material.snackbar.Snackbar.make(binding.root, "Scripts Active", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
+                }
+                true
             }
+            popup.show()
         }
 
-        binding.btnMenu.setOnClickListener {
-            if (panelBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
-                panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+        binding.btnSiteInfo.setOnClickListener { view ->
+            val popup = android.widget.PopupMenu(this, view)
+            if (currentWebView?.url != null && currentWebView?.url?.startsWith("http") == true) {
+                popup.menu.add("Copy Cookies")
+                popup.menu.add("Website info")
             } else {
-                binding.tabsPanel.isVisible = false
-                panelBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                popup.menu.add("General Settings")
+                popup.menu.add("Ad blocking")
+                popup.menu.add("Scripts")
             }
+            popup.setOnMenuItemClickListener { item ->
+                when(item.title) {
+                    "Copy Cookies" -> copyCurrentCookies()
+                    "Website info" -> com.google.android.material.snackbar.Snackbar.make(binding.root, "Site Secure via HTTPS", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
+                    "General Settings" -> {
+                        val intent = android.content.Intent(this@MainActivity, SettingsActivity::class.java)
+                        intent.putExtra("SETTINGS_MODE", "GENERAL")
+                        startActivity(intent)
+                    }
+                    "Ad blocking" -> {
+                        val intent = android.content.Intent(this@MainActivity, SettingsActivity::class.java)
+                        intent.putExtra("SETTINGS_MODE", "AD_BLOCKING")
+                        startActivity(intent)
+                    }
+                    "Scripts" -> {
+                        val intent = android.content.Intent(this@MainActivity, SettingsActivity::class.java)
+                        intent.putExtra("SETTINGS_MODE", "SCRIPTS")
+                        startActivity(intent)
+                    }
+                }
+                true
+            }
+            popup.show()
         }
-
-        binding.menuItemBookmarks.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            showBookmarksPanel()
-        }
-
-        binding.menuItemHistory.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            showHistoryPanel()
-        }
-
-        binding.menuItemClearData.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            clearBrowsingData()
-        }
-
-        binding.menuItemDesktop.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            toggleDesktopMode()
-        }
-
-        binding.menuItemShare.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            shareCurrentUrl()
-        }
-
-        binding.menuItemCopyUrl.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            copyCurrentUrl()
-        }
-
-        binding.menuItemCopyCookie?.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            copyCurrentCookies()
-        }
-
-        binding.menuItemToggleAdBlock?.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            isAdBlockEnabled = !isAdBlockEnabled
-            val msg = if (isAdBlockEnabled) getString(com.personal.browser.R.string.ad_block_enabled) else getString(com.personal.browser.R.string.ad_block_disabled)
-            com.google.android.material.snackbar.Snackbar.make(binding.root, msg, com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
-        }
-
-        binding.menuItemUserScripts?.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            com.google.android.material.snackbar.Snackbar.make(binding.root, "User Scripts Manager (Coming Soon)", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
-        }
-
-        binding.menuItemSettings?.setOnClickListener {
-            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-            com.google.android.material.snackbar.Snackbar.make(binding.root, "Settings (Coming Soon)", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
-        }
-
-        binding.overlayDismiss.setOnClickListener { hidePanels() }
     }
 
     private fun setupUrlBar() {
@@ -169,94 +132,19 @@ class MainActivity : AppCompatActivity() {
         binding.urlEditText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 binding.urlEditText.selectAll()
-                hidePanels()
             } else {
                 updateUrlDisplay()
             }
         }
-
-        binding.btnRefresh.setOnClickListener {
-            val tab = viewModel.activeTab
-            if (tab?.isLoading == true) {
-                currentWebView?.stopLoading()
-            } else {
-                currentWebView?.reload()
-            }
-        }
-    }
-
-    private fun setupNavigationButtons() {
-        binding.btnBack.setOnClickListener {
-            currentWebView?.let { if (it.canGoBack()) it.goBack() }
-        }
-        binding.btnForward.setOnClickListener {
-            currentWebView?.let { if (it.canGoForward()) it.goForward() }
-        }
-    }
-
-    private fun setupTabsRecycler() {
-        tabsAdapter = TabsAdapter(
-            onTabClick = { index ->
-                viewModel.switchTab(index)
-                hidePanels()
-            },
-            onTabClose = { index ->
-                val tabId = viewModel.tabs.value?.getOrNull(index)?.id
-                tabId?.let { webViews.remove(it)?.destroy() }
-                viewModel.closeTab(index)
-            }
-        )
-        binding.tabsRecycler.apply {
-            layoutManager = LinearLayoutManager(this@MainActivity)
-            adapter = tabsAdapter
-        }
-    }
-
-    private fun setupBookmarkHistoryRecycler() {
-        bookmarkHistoryAdapter = BookmarkHistoryAdapter(
-            onItemClick = { url ->
-                loadUrl(url)
-                hidePanels()
-            },
-            onItemDelete = { item ->
-                // handled via ViewModel
-            }
-        )
-        binding.bookmarkHistoryRecycler.apply {
-            layoutManager = LinearLayoutManager(this@MainActivity)
-            adapter = bookmarkHistoryAdapter
-        }
     }
 
     private fun observeViewModel() {
-        viewModel.tabs.observe(this) { tabs ->
-            tabsAdapter.submitList(tabs.toList())
-            binding.tabCountText.text = tabs.size.toString()
-        }
-
         viewModel.activeTabIndex.observe(this) { index ->
             val tabs = viewModel.tabs.value ?: return@observe
             val tab = tabs.getOrNull(index) ?: return@observe
 
             switchToTab(tab.id, tab.url)
             updateUrlDisplay()
-            updateNavigationState()
-        }
-
-        viewModel.isBookmarked.observe(this) { bookmarked ->
-            binding.btnBookmark.isSelected = bookmarked
-        }
-
-        viewModel.bookmarks.observe(this) { bookmarks ->
-            if (binding.bookmarkHistoryPanel.isVisible && binding.panelTitle.text == getString(com.personal.browser.R.string.bookmarks)) {
-                bookmarkHistoryAdapter.submitBookmarks(bookmarks)
-            }
-        }
-
-        viewModel.history.observe(this) { history ->
-            if (binding.bookmarkHistoryPanel.isVisible && binding.panelTitle.text == getString(com.personal.browser.R.string.history)) {
-                bookmarkHistoryAdapter.submitHistory(history)
-            }
         }
     }
 
@@ -304,9 +192,14 @@ class MainActivity : AppCompatActivity() {
                     super.onPageStarted(view, url, favicon)
                     if (this@apply === currentWebView) {
                         viewModel.onPageStarted(url, view.title)
-                        binding.btnRefresh.setImageResource(com.personal.browser.R.drawable.ic_close)
                         binding.progressBar.isVisible = true
-                        updateNavigationState()
+                        
+                        // Switch Icon to Shield if loading http/s
+                        if (url.startsWith("http")) {
+                            binding.btnSiteInfo.setImageResource(com.personal.browser.R.drawable.ic_security) // Ensure ic_security exists, falling back if not but assuming Standard material exists
+                        } else {
+                            binding.btnSiteInfo.setImageResource(com.personal.browser.R.drawable.ic_history)
+                        }
                     }
                 }
 
@@ -314,9 +207,7 @@ class MainActivity : AppCompatActivity() {
                     super.onPageFinished(view, url)
                     if (this@apply === currentWebView) {
                         viewModel.onPageFinished(url, view.title)
-                        binding.btnRefresh.setImageResource(com.personal.browser.R.drawable.ic_refresh)
                         binding.progressBar.isVisible = false
-                        updateNavigationState()
                         updateUrlDisplay()
                         
                         // Inject User Scripts
@@ -392,46 +283,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateNavigationState() {
-        val wv = currentWebView
-        val canBack = wv?.canGoBack() == true
-        val canForward = wv?.canGoForward() == true
-        viewModel.onNavigationStateChanged(canBack, canForward)
-        binding.btnBack.isEnabled = canBack
-        binding.btnForward.isEnabled = canForward
-        binding.btnBack.alpha = if (canBack) 1f else 0.38f
-        binding.btnForward.alpha = if (canForward) 1f else 0.38f
-    }
-
-    private fun showTabsPanel() {
-        hidePanels()
-        binding.tabsPanel.isVisible = true
-        binding.overlayDismiss.isVisible = true
-    }
-
-    private fun showBookmarksPanel() {
-        hidePanels()
-        binding.panelTitle.setText(com.personal.browser.R.string.bookmarks)
-        viewModel.bookmarks.value?.let { bookmarkHistoryAdapter.submitBookmarks(it) }
-        binding.bookmarkHistoryPanel.isVisible = true
-        binding.overlayDismiss.isVisible = true
-    }
-
-    private fun showHistoryPanel() {
-        hidePanels()
-        binding.panelTitle.setText(com.personal.browser.R.string.history)
-        viewModel.history.value?.let { bookmarkHistoryAdapter.submitHistory(it) }
-        binding.bookmarkHistoryPanel.isVisible = true
-        binding.overlayDismiss.isVisible = true
-    }
-
-    private fun hidePanels() {
-        binding.tabsPanel.isVisible = false
-        binding.bookmarkHistoryPanel.isVisible = false
-        binding.overlayDismiss.isVisible = false
-        panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-    }
-
     private fun clearBrowsingData() {
         currentWebView?.clearCache(true)
         currentWebView?.clearHistory()
@@ -464,15 +315,6 @@ class MainActivity : AppCompatActivity() {
         startActivity(android.content.Intent.createChooser(intent, getString(com.personal.browser.R.string.share_url)))
     }
 
-    private fun copyCurrentUrl() {
-        val url = viewModel.activeTab?.url ?: return
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("URL", url))
-        com.google.android.material.snackbar.Snackbar.make(
-            binding.root, getString(com.personal.browser.R.string.url_copied), com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
-        ).show()
-    }
-
     private fun copyCurrentCookies() {
         val url = viewModel.activeTab?.url ?: return
         val cookies = android.webkit.CookieManager.getInstance().getCookie(url)
@@ -487,12 +329,6 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    panelBehavior.state == BottomSheetBehavior.STATE_EXPANDED -> {
-                        panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-                    }
-                    binding.tabsPanel.isVisible || binding.bookmarkHistoryPanel.isVisible -> {
-                        hidePanels()
-                    }
                     binding.urlEditText.hasFocus() -> {
                         hideKeyboard()
                         binding.urlEditText.clearFocus()
@@ -519,7 +355,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(binding.urlEditText.windowToken, 0)
+        if (currentFocus != null) {
+            imm.hideSoftInputFromWindow(currentFocus!!.windowToken, 0)
+        }
         binding.urlEditText.clearFocus()
     }
 

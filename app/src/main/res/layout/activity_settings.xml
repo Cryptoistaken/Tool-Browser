@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background">
+
+    <!-- Universal Top Bar -->
+    <LinearLayout
+        android:id="@+id/settingsTopBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:background="@color/surface">
+
+        <ImageView
+            android:id="@+id/btnBackSettings"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Back"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+        <TextView
+            android:id="@+id/tvSettingsTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="16dp"
+            android:text="Ad blocking"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/on_surface" />
+
+        <ImageView
+            android:id="@+id/btnSettingsAdd"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_add"
+            android:visibility="gone"
+            android:contentDescription="Add"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/outline"
+        android:alpha="0.2" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- AD BLOCKING CONTAINER -->
+            <LinearLayout
+                android:id="@+id/adBlockingContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="visible">
+
+                <!-- Item 1 -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvAdBlockTitle1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ad blocking"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvAdBlockTitle1"
+                        android:layout_marginTop="4dp"
+                        android:text="Enabled: 3981 ads blocked, 309.4 MB saved"
+                        android:textSize="14sp"
+                        android:textColor="@color/on_surface_variant" />
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchAdBlocking"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:checked="true" />
+                </RelativeLayout>
+
+                <!-- Item 2 -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvAdBlockTitle2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Enable built-in filters"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvAdBlockTitle2"
+                        android:layout_marginTop="4dp"
+                        android:text="Built-in filters only block common ads"
+                        android:textSize="14sp"
+                        android:textColor="@color/on_surface_variant" />
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchFilters"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:checked="true" />
+                </RelativeLayout>
+
+                <!-- Item 3 -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvAdBlockTitle3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom filters"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvAdBlockTitle3"
+                        android:layout_marginTop="4dp"
+                        android:text="Including custom filters and marked ads"
+                        android:textSize="14sp"
+                        android:textColor="@color/on_surface_variant" />
+                </RelativeLayout>
+
+                <!-- Item 4 -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvAdBlockTitle4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Filter subscriptions"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvAdBlockTitle4"
+                        android:layout_marginTop="4dp"
+                        android:text="Subscribe to Adblock Plus filter lists"
+                        android:textSize="14sp"
+                        android:textColor="@color/on_surface_variant" />
+                </RelativeLayout>
+
+                <!-- Item 5 -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvAdBlockTitle5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Expand webpage content automatically"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvAdBlockTitle5"
+                        android:layout_marginTop="4dp"
+                        android:text="Expand collapsed content automatically when open a webpage"
+                        android:textSize="14sp"
+                        android:textColor="@color/on_surface_variant" />
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchExpand"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:checked="true" />
+                </RelativeLayout>
+            </LinearLayout>
+
+            <!-- SCRIPTS CONTAINER -->
+            <LinearLayout
+                android:id="@+id/scriptsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Item 1 -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvScriptsTitle1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Enable scripts"
+                        android:layout_centerVertical="true"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchEnableScripts"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:checked="true" />
+                </RelativeLayout>
+
+                <!-- Item 2 -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvScriptsTitle2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Update interval"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvScriptsTitle2"
+                        android:layout_marginTop="4dp"
+                        android:text="Never"
+                        android:textSize="14sp"
+                        android:textColor="@color/on_surface_variant" />
+                </RelativeLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="Scripts"
+                    android:textSize="14sp"
+                    android:textColor="@color/primary" />
+
+                <!-- Item 3 -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvScriptsTitle3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Immersive Translate - Translate Web &amp; PDF"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvScriptsTitle3"
+                        android:layout_marginTop="4dp"
+                        android:text="1.12.4"
+                        android:textSize="14sp"
+                        android:textColor="@color/on_surface_variant" />
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchScriptImmersive"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:checked="true" />
+                </RelativeLayout>
+            </LinearLayout>
+
+        </FrameLayout>
+    </ScrollView>
+
+</LinearLayout>

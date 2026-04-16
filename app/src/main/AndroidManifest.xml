@@ -33,6 +33,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.activity.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PersonalBrowser" />
+
     </application>
 
 </manifest>
