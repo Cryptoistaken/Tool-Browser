@@ -4,20 +4,20 @@
 build/
 target/
 
-# Logs and temp files
-*.log
-*.tmp
-
 # Environment
 .env
 .env.local
 *.env.*
 
+# Logs and temp files
+*.log
+*.tmp
+
 # Editors
 .vscode/
 .idea/
 
-# OS generated files
+# OS
 .DS_Store
 Thumbs.db
 ```
