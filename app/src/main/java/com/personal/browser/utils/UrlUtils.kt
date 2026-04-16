@@ -38,5 +38,5 @@ object UrlUtils {
     }
 
     fun isSearch(url: String): Boolean =
-        url.contains("google.com/search") || url.contains("google.com/search")
+        url.contains("google.com/search")
 }
