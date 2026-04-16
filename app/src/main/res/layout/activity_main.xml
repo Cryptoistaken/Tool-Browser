@@ -354,6 +354,58 @@
             android:background="?attr/selectableItemBackground"
             android:drawableStart="@drawable/ic_delete" />
 
+        <TextView
+            android:id="@+id/menuItemCopyCookie"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:text="@string/copy_cookie"
+            android:textSize="15sp"
+            android:textColor="@color/on_surface"
+            android:drawablePadding="16dp"
+            android:background="?attr/selectableItemBackground"
+            android:drawableStart="@drawable/ic_copy" />
+            
+        <TextView
+            android:id="@+id/menuItemUserScripts"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:text="@string/user_scripts"
+            android:textSize="15sp"
+            android:textColor="@color/on_surface"
+            android:drawablePadding="16dp"
+            android:background="?attr/selectableItemBackground"
+            android:drawableStart="@drawable/ic_desktop" />
+
+        <TextView
+            android:id="@+id/menuItemToggleAdBlock"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:text="@string/ad_blocker"
+            android:textSize="15sp"
+            android:textColor="@color/on_surface"
+            android:drawablePadding="16dp"
+            android:background="?attr/selectableItemBackground"
+            android:drawableStart="@drawable/ic_bookmark" />
+
+        <TextView
+            android:id="@+id/menuItemSettings"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:text="@string/settings"
+            android:textSize="15sp"
+            android:textColor="@color/on_surface"
+            android:drawablePadding="16dp"
+            android:background="?attr/selectableItemBackground"
+            android:drawableStart="@drawable/ic_history" />
+
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

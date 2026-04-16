@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Brand Colors -->
-    <color name="primary">#5B6AF5</color>
-    <color name="primary_variant">#4455E8</color>
+    <!-- Cursor Brand Colors -->
+    <color name="primary">#F54E00</color> <!-- Accent Orange -->
+    <color name="primary_variant">#C23D00</color>
     <color name="on_primary">#FFFFFF</color>
 
-    <!-- Surface Colors (Light) -->
-    <color name="background">#F5F7FF</color>
-    <color name="surface">#FFFFFF</color>
-    <color name="surface_variant">#F0F2FF</color>
-    <color name="on_surface">#1A1C2E</color>
-    <color name="on_surface_variant">#6B7280</color>
-    <color name="outline">#E2E4F3</color>
+    <!-- Cursor Surface Colors (Light) -->
+    <color name="background">#F2F1ED</color> <!-- Cursor Cream -->
+    <color name="surface">#E6E5E0</color> <!-- Cursor Light -->
+    <color name="surface_variant">#EBEAE5</color> <!-- Surface 300 -->
+    <color name="on_surface">#26251E</color> <!-- Cursor Dark -->
+    <color name="on_surface_variant">#8C8B82</color> <!-- 55% warm brown approx -->
+    <color name="outline">#E3E2DF</color> <!-- approx oklab 10% -->
 
     <!-- URL Bar -->
-    <color name="url_bar_bg">#F0F2FF</color>
+    <color name="url_bar_bg">#F7F7F4</color> <!-- Surface 100 -->
 
-    <!-- Error -->
-    <color name="on_error">#DC2626</color>
-
-    <!-- Night mode surfaces -->
-    <color name="background_night">#12131F</color>
-    <color name="surface_night">#1E2030</color>
-    <color name="surface_variant_night">#252740</color>
-    <color name="on_surface_night">#E8EAFF</color>
-    <color name="on_surface_variant_night">#9BA3C0</color>
-    <color name="outline_night">#2E3150</color>
-    <color name="url_bar_bg_night">#252740</color>
+    <!-- Semantic / Feedback -->
+    <color name="on_error">#CF2D56</color> <!-- Warm error red -->
+    
+    <!-- Fallbacks (If Night mode surfaces reference these directly) -->
+    <color name="background_night">#1A1914</color>
+    <color name="surface_night">#26251E</color>
+    <color name="surface_variant_night">#38372C</color>
+    <color name="on_surface_night">#F2F1ED</color>
+    <color name="on_surface_variant_night">#B5B4A8</color>
+    <color name="outline_night">#3D3C33</color>
+    <color name="url_bar_bg_night">#2F2E23</color>
 </resources>

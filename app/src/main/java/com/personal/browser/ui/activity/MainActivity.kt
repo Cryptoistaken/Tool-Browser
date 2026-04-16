@@ -10,6 +10,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebSettings
@@ -39,6 +40,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bookmarkHistoryAdapter: BookmarkHistoryAdapter
 
     private lateinit var panelBehavior: BottomSheetBehavior<View>
+    private var isAdBlockEnabled = true
+
+    // Lightweight ad-block domain list
+    private val adBlockDomains = setOf(
+        "doubleclick.net", "googleadservices.com", "googlesyndication.com",
+        "adservice.google.com", "amazon-adsystem.com", "criteo.com", "adnxs.com"
+    )
+
+    private val activeUserScripts = listOf(
+        "javascript:(function() { console.log('User Scripts System Ready.'); })();"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,6 +127,28 @@ class MainActivity : AppCompatActivity() {
         binding.menuItemCopyUrl.setOnClickListener {
             panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             copyCurrentUrl()
+        }
+
+        binding.menuItemCopyCookie?.setOnClickListener {
+            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            copyCurrentCookies()
+        }
+
+        binding.menuItemToggleAdBlock?.setOnClickListener {
+            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            isAdBlockEnabled = !isAdBlockEnabled
+            val msg = if (isAdBlockEnabled) getString(com.personal.browser.R.string.ad_block_enabled) else getString(com.personal.browser.R.string.ad_block_disabled)
+            com.google.android.material.snackbar.Snackbar.make(binding.root, msg, com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
+        }
+
+        binding.menuItemUserScripts?.setOnClickListener {
+            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            com.google.android.material.snackbar.Snackbar.make(binding.root, "User Scripts Manager (Coming Soon)", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
+        }
+
+        binding.menuItemSettings?.setOnClickListener {
+            panelBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            com.google.android.material.snackbar.Snackbar.make(binding.root, "Settings (Coming Soon)", com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show()
         }
 
         binding.overlayDismiss.setOnClickListener { hidePanels() }
@@ -263,6 +297,8 @@ class MainActivity : AppCompatActivity() {
                 userAgentString = settings.userAgentString.replace("; wv", "")
             }
 
+            android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
+
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                     super.onPageStarted(view, url, favicon)
@@ -282,7 +318,23 @@ class MainActivity : AppCompatActivity() {
                         binding.progressBar.isVisible = false
                         updateNavigationState()
                         updateUrlDisplay()
+                        
+                        // Inject User Scripts
+                        activeUserScripts.forEach { script ->
+                            view.evaluateJavascript(script, null)
+                        }
                     }
+                }
+
+                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                    if (isAdBlockEnabled) {
+                        val host = request.url.host ?: ""
+                        if (adBlockDomains.any { host.contains(it) }) {
+                            // Block the ad by returning an empty input stream
+                            return WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream("".toByteArray()))
+                        }
+                    }
+                    return super.shouldInterceptRequest(view, request)
                 }
 
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -418,6 +470,16 @@ class MainActivity : AppCompatActivity() {
         clipboard.setPrimaryClip(android.content.ClipData.newPlainText("URL", url))
         com.google.android.material.snackbar.Snackbar.make(
             binding.root, getString(com.personal.browser.R.string.url_copied), com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun copyCurrentCookies() {
+        val url = viewModel.activeTab?.url ?: return
+        val cookies = android.webkit.CookieManager.getInstance().getCookie(url)
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Cookies", cookies ?: ""))
+        com.google.android.material.snackbar.Snackbar.make(
+            binding.root, getString(com.personal.browser.R.string.cookies_copied), com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
         ).show()
     }
 
