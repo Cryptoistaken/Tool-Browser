@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand Colors -->
+    <color name="primary">#5B6AF5</color>
+    <color name="primary_variant">#4455E8</color>
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- Surface Colors (Light) -->
+    <color name="background">#F5F7FF</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F0F2FF</color>
+    <color name="on_surface">#1A1C2E</color>
+    <color name="on_surface_variant">#6B7280</color>
+    <color name="outline">#E2E4F3</color>
+
+    <!-- URL Bar -->
+    <color name="url_bar_bg">#F0F2FF</color>
+
+    <!-- Error -->
+    <color name="on_error">#DC2626</color>
+
+    <!-- Night mode surfaces -->
+    <color name="background_night">#12131F</color>
+    <color name="surface_night">#1E2030</color>
+    <color name="surface_variant_night">#252740</color>
+    <color name="on_surface_night">#E8EAFF</color>
+    <color name="on_surface_variant_night">#9BA3C0</color>
+    <color name="outline_night">#2E3150</color>
+    <color name="url_bar_bg_night">#252740</color>
+</resources>

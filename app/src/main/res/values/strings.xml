@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Browser</string>
+    <string name="search_or_enter_url">Search or enter URL</string>
+    <string name="back">Back</string>
+    <string name="forward">Forward</string>
+    <string name="refresh">Refresh</string>
+    <string name="new_tab">New Tab</string>
+    <string name="bookmark">Bookmark</string>
+    <string name="tabs">Tabs</string>
+    <string name="menu">Menu</string>
+    <string name="bookmarks">Bookmarks</string>
+    <string name="history">History</string>
+    <string name="desktop_site">Desktop site</string>
+    <string name="share">Share</string>
+    <string name="copy_url">Copy URL</string>
+    <string name="clear_data">Clear browsing data</string>
+    <string name="close_tab">Close tab</string>
+    <string name="data_cleared">Browsing data cleared</string>
+    <string name="url_copied">URL copied</string>
+    <string name="share_url">Share URL</string>
+</resources>
