@@ -30,7 +30,7 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_history" <!-- Placeholder for home/settings icon -->
+                android:src="@drawable/ic_history"
                 android:contentDescription="@string/settings"
                 android:padding="8dp" />
 
