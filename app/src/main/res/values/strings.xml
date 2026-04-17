@@ -39,4 +39,5 @@
     <string name="script_added">Script added</string>
     <string name="script_deleted">Script deleted</string>
     <string name="invalid_url">Invalid URL</string>
+    <string name="script_updated">Script updated</string>
 </resources>

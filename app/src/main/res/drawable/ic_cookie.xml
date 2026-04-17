@@ -1,27 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Cookie icon for the copy-cookie button -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:viewportWidth="24"
     android:viewportHeight="24"
     android:width="24dp"
-    android:height="24dp">
-    <!-- Cookie circle base -->
+    android:height="24dp"
+    android:tint="@color/on_surface">
     <path
         android:fillColor="@android:color/transparent"
-        android:strokeColor="#000000"
+        android:strokeColor="@color/on_surface"
         android:strokeWidth="1.8"
         android:pathData="M21,12A9,9 0 1,1 12,3a7,7 0 0,0 7,7 2,2 0 0,0 2,2z" />
-    <!-- Chocolate chip dots -->
     <path
-        android:fillColor="#000000"
+        android:fillColor="@color/on_surface"
         android:pathData="M8.5,10A1,1 0 1,0 8.5,8A1,1 0 0,0 8.5,10z" />
     <path
-        android:fillColor="#000000"
+        android:fillColor="@color/on_surface"
         android:pathData="M12,14.5A1,1 0 1,0 12,12.5A1,1 0 0,0 12,14.5z" />
     <path
-        android:fillColor="#000000"
+        android:fillColor="@color/on_surface"
         android:pathData="M9,16.5A0.75,0.75 0 1,0 9,15A0.75,0.75 0 0,0 9,16.5z" />
     <path
-        android:fillColor="#000000"
+        android:fillColor="@color/on_surface"
         android:pathData="M13.5,11A0.75,0.75 0 1,0 13.5,9.5A0.75,0.75 0 0,0 13.5,11z" />
 </vector>

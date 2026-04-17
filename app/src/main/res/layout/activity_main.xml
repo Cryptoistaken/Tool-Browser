@@ -11,19 +11,19 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- ── Top URL Bar ────────────────────────────────────────── -->
+        <!-- ── Top Chrome-style Bar ──────────────────────────────── -->
         <LinearLayout
             android:id="@+id/urlBar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="4dp"
+            android:paddingVertical="8dp"
             android:background="@color/surface"
             android:gravity="center_vertical"
             android:elevation="4dp">
 
-            <!-- Cookie button: cookie icon, top-left -->
+            <!-- 1) Cookie button -->
             <ImageButton
                 android:id="@+id/btnCopyCookie"
                 android:layout_width="40dp"
@@ -34,25 +34,23 @@
                 android:padding="8dp"
                 android:visibility="invisible" />
 
-            <!-- URL bar pill -->
-            <com.google.android.material.textfield.TextInputLayout
+            <!-- 2) URL pill — takes all remaining space -->
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="38dp"
                 android:layout_weight="1"
-                android:layout_marginHorizontal="4dp"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
-                app:boxCornerRadiusTopStart="20dp"
-                app:boxCornerRadiusTopEnd="20dp"
-                app:boxCornerRadiusBottomStart="20dp"
-                app:boxCornerRadiusBottomEnd="20dp"
-                app:boxStrokeColor="@color/outline"
-                app:boxBackgroundColor="@color/url_bar_bg"
-                app:hintEnabled="false">
+                android:layout_marginHorizontal="2dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_url_pill"
+                android:paddingStart="14dp"
+                android:paddingEnd="4dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/urlEditText"
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="match_parent"
+                    android:layout_weight="1"
                     android:imeOptions="actionGo|flagNoExtractUi"
                     android:inputType="textUri|textNoSuggestions"
                     android:maxLines="1"
@@ -60,13 +58,50 @@
                     android:textSize="14sp"
                     android:textColor="@color/on_surface"
                     android:hint="@string/search_or_enter_url"
-                    android:paddingHorizontal="16dp"
                     android:selectAllOnFocus="true"
-                    android:background="@android:color/transparent" />
+                    android:background="@android:color/transparent"
+                    android:paddingVertical="0dp" />
 
-            </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
 
-            <!-- Three-dot overflow menu -->
+            <!-- 3) New Tab (+) button -->
+            <ImageButton
+                android:id="@+id/btnNewTab"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_add"
+                android:contentDescription="@string/new_tab"
+                android:padding="10dp" />
+
+            <!-- 4) Tabs switcher button with count badge -->
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp">
+
+                <ImageButton
+                    android:id="@+id/btnTabs"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_tabs_bg"
+                    android:contentDescription="@string/tabs"
+                    android:padding="10dp" />
+
+                <TextView
+                    android:id="@+id/tvTabCount"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/on_surface"
+                    android:text="1" />
+
+            </FrameLayout>
+
+            <!-- 5) Three-dot overflow menu -->
             <ImageButton
                 android:id="@+id/btnMenu"
                 android:layout_width="40dp"
@@ -74,7 +109,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_more_vert"
                 android:contentDescription="@string/menu"
-                android:padding="8dp" />
+                android:padding="10dp" />
 
         </LinearLayout>
 
@@ -83,7 +118,7 @@
             android:id="@+id/progressBar"
             style="@style/Widget.AppCompat.ProgressBar.Horizontal"
             android:layout_width="match_parent"
-            android:layout_height="3dp"
+            android:layout_height="2dp"
             android:max="100"
             android:progressTint="@color/primary"
             android:visibility="invisible" />
@@ -120,7 +155,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_arrow_back"
                 android:contentDescription="@string/back"
-                android:padding="12dp"
+                android:padding="14dp"
                 android:alpha="0.4" />
 
             <ImageButton
@@ -131,7 +166,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_arrow_forward"
                 android:contentDescription="@string/forward"
-                android:padding="12dp"
+                android:padding="14dp"
                 android:alpha="0.4" />
 
             <ImageButton
@@ -142,7 +177,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_refresh"
                 android:contentDescription="@string/refresh"
-                android:padding="12dp" />
+                android:padding="14dp" />
 
             <ImageButton
                 android:id="@+id/btnBookmark"
@@ -152,35 +187,19 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_bookmark"
                 android:contentDescription="@string/bookmark"
-                android:padding="12dp" />
+                android:padding="14dp" />
 
-            <!-- Tabs button with count badge -->
-            <FrameLayout
+            <!-- Logo button (center) -->
+            <ImageButton
+                android:id="@+id/btnLogo"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1">
-
-                <ImageButton
-                    android:id="@+id/btnTabs"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_tabs_bg"
-                    android:contentDescription="@string/tabs"
-                    android:padding="12dp" />
-
-                <TextView
-                    android:id="@+id/tvTabCount"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_gravity="center"
-                    android:gravity="center"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/on_surface"
-                    android:text="1" />
-
-            </FrameLayout>
+                android:layout_weight="1"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_logo_foreground"
+                android:contentDescription="@string/app_name"
+                android:padding="10dp"
+                android:scaleType="fitCenter" />
 
         </LinearLayout>
 

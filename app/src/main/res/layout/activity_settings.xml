@@ -306,7 +306,7 @@
                         android:layout_height="22dp"
                         android:src="@drawable/ic_delete"
                         android:layout_marginEnd="16dp"
-                        android:tint="@color/on_surface_variant"
+                        android:tint="@color/on_surface"
                         android:contentDescription="Clear" />
 
                     <TextView
@@ -362,7 +362,7 @@
                         android:layout_height="22dp"
                         android:src="@drawable/ic_security"
                         android:layout_marginEnd="16dp"
-                        android:tint="@color/on_surface_variant"
+                        android:tint="@color/on_surface"
                         android:contentDescription="Ad Blocking" />
 
                     <LinearLayout
@@ -419,7 +419,7 @@
                         android:layout_height="22dp"
                         android:src="@drawable/ic_script"
                         android:layout_marginEnd="16dp"
-                        android:tint="@color/on_surface_variant"
+                        android:tint="@color/on_surface"
                         android:contentDescription="User Scripts" />
 
                     <LinearLayout

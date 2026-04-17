@@ -1,7 +1,6 @@
 package com.personal.browser.ui.activity
 
 import android.app.AlertDialog
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -17,12 +16,18 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.personal.browser.R
 import com.personal.browser.databinding.ActivitySettingsBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -47,7 +52,6 @@ class SettingsActivity : AppCompatActivity() {
         const val PREF_SCRIPTS_JSON     = "pref_scripts_json"
         const val DEFAULT_HOMEPAGE      = "https://www.google.com"
 
-        /** Preset homepage URLs shown in the spinner (plus "Custom…" at the end). */
         val HOMEPAGE_PRESETS = listOf(
             "https://www.google.com",
             "https://www.instagram.com/accounts/login",
@@ -55,6 +59,8 @@ class SettingsActivity : AppCompatActivity() {
         )
         private const val CUSTOM_LABEL = "Custom…"
     }
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,7 +95,7 @@ class SettingsActivity : AppCompatActivity() {
                 binding.btnSettingsAdd.visibility      = View.VISIBLE
                 setupScriptsPanel()
             }
-            else -> { // "GENERAL"
+            else -> {
                 binding.tvSettingsTitle.text = "Settings"
                 binding.generalContainer.visibility    = View.VISIBLE
                 binding.adBlockingContainer.visibility = View.GONE
@@ -100,21 +106,17 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // GENERAL SETTINGS
-    // ────────────────────────────────────────────────────────────────────────
+    // ── GENERAL SETTINGS ─────────────────────────────────────────────────────
 
     private fun setupGeneralSettings() {
 
-        // ── Homepage spinner ──────────────────────────────────────────────
+        // Homepage spinner
         val currentUrl = prefs.getString(PREF_HOMEPAGE_URL, DEFAULT_HOMEPAGE) ?: DEFAULT_HOMEPAGE
-
         val spinnerItems = HOMEPAGE_PRESETS.toMutableList().also { it.add(CUSTOM_LABEL) }
         val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, spinnerItems)
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerHomepage.adapter = spinnerAdapter
 
-        // Pre-select matching preset or "Custom…"
         val presetIndex = HOMEPAGE_PRESETS.indexOf(currentUrl)
         if (presetIndex >= 0) {
             binding.spinnerHomepage.setSelection(presetIndex)
@@ -131,7 +133,6 @@ class SettingsActivity : AppCompatActivity() {
                     parent: android.widget.AdapterView<*>, view: View?, pos: Int, id: Long
                 ) {
                     if (pos == HOMEPAGE_PRESETS.size) {
-                        // "Custom…"
                         binding.tilCustomHomepage.visibility = View.VISIBLE
                     } else {
                         binding.tilCustomHomepage.visibility = View.GONE
@@ -141,41 +142,37 @@ class SettingsActivity : AppCompatActivity() {
                 override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
             }
 
-        // Custom URL field
         binding.etHomepageUrl.setOnEditorActionListener { tv, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                saveCustomHomepage(tv.text.toString().trim())
-                true
+                saveCustomHomepage(tv.text.toString().trim()); true
             } else false
         }
         binding.etHomepageUrl.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) saveCustomHomepage(binding.etHomepageUrl.text.toString().trim())
         }
 
-        // ── Dark mode switch ──────────────────────────────────────────────
-        val isDark = prefs.getBoolean(PREF_DARK_MODE, false)
-        binding.switchDarkMode.isChecked = isDark
+        // Dark mode
+        binding.switchDarkMode.isChecked = prefs.getBoolean(PREF_DARK_MODE, false)
         binding.switchDarkMode.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean(PREF_DARK_MODE, checked).apply()
             AppCompatDelegate.setDefaultNightMode(
-                if (checked) AppCompatDelegate.MODE_NIGHT_YES
-                else AppCompatDelegate.MODE_NIGHT_NO
+                if (checked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
             )
         }
 
-        // ── Clear on exit switch ──────────────────────────────────────────
+        // Clear on exit — just save the pref; clearing runs in MainActivity.onStop
         binding.switchClearOnExit.isChecked = prefs.getBoolean(PREF_CLEAR_ON_EXIT, false)
         binding.switchClearOnExit.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean(PREF_CLEAR_ON_EXIT, checked).apply()
         }
 
-        // ── Clear data now ────────────────────────────────────────────────
+        // Clear data now — signals MainActivity via RESULT_OK
         binding.btnClearDataNow.setOnClickListener {
             setResult(RESULT_OK, Intent().putExtra("ACTION", "CLEAR_DATA"))
             finish()
         }
 
-        // ── Navigate to sub-screens ───────────────────────────────────────
+        // Navigate to sub-screens
         binding.btnGoAdBlocking.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java)
                 .putExtra("SETTINGS_MODE", "AD_BLOCKING"))
@@ -196,9 +193,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.etHomepageUrl.setText(finalUrl)
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // AD BLOCKING
-    // ────────────────────────────────────────────────────────────────────────
+    // ── AD BLOCKING ──────────────────────────────────────────────────────────
 
     private fun setupAdBlockingSwitches() {
         binding.switchAdBlocking.isChecked = prefs.getBoolean(PREF_AD_BLOCKING, true)
@@ -216,24 +211,15 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // USER SCRIPTS
-    // ────────────────────────────────────────────────────────────────────────
+    // ── USER SCRIPTS ─────────────────────────────────────────────────────────
 
     private fun setupScriptsPanel() {
-        // Master enable switch
         binding.switchEnableScripts.isChecked = prefs.getBoolean(PREF_SCRIPTS_ENABLED, true)
         binding.switchEnableScripts.setOnCheckedChangeListener { _, c ->
             prefs.edit().putBoolean(PREF_SCRIPTS_ENABLED, c).apply()
         }
-
-        // Render current scripts list
         refreshScriptsList()
-
-        // + button → show picker dialog
-        binding.btnSettingsAdd.setOnClickListener {
-            showAddScriptDialog()
-        }
+        binding.btnSettingsAdd.setOnClickListener { showAddScriptDialog() }
     }
 
     /** Read scripts from prefs and rebuild the dynamic list UI. */
@@ -256,21 +242,35 @@ class SettingsActivity : AppCompatActivity() {
             val sw = row.findViewById<SwitchMaterial>(R.id.switchScript)
             sw.isChecked = script.enabled
             sw.setOnCheckedChangeListener { _, checked ->
-                script.enabled = checked
+                scripts[index] = scripts[index].copy(enabled = checked)
                 saveScripts(scripts)
             }
 
+            // Tap the row to edit
+            row.setOnClickListener { showEditScriptDialog(scripts, index) }
+
             row.findViewById<View>(R.id.btnDeleteScript).setOnClickListener {
-                scripts.removeAt(index)
-                saveScripts(scripts)
-                refreshScriptsList()
-                Toast.makeText(this, R.string.script_deleted, Toast.LENGTH_SHORT).show()
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("Delete Script")
+                    .setMessage("Remove \"${script.name}\"?")
+                    .setPositiveButton("Delete") { _, _ ->
+                        val updated = loadScripts()
+                        if (index < updated.size) {
+                            updated.removeAt(index)
+                            saveScripts(updated)
+                        }
+                        refreshScriptsList()
+                        Toast.makeText(this, R.string.script_deleted, Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
             }
             container.addView(row)
         }
     }
 
-    /** Show a dialog: choose source type (URL / File / Text). */
+    // ── Add script dialog ────────────────────────────────────────────────────
+
     private fun showAddScriptDialog() {
         val options = arrayOf(
             getString(R.string.script_from_url),
@@ -289,19 +289,33 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
-    /** Dialog: enter a URL to a remote .user.js file. */
+    /**
+     * Dialog: enter a URL to a remote .user.js file.
+     * We actually fetch the script content over the network before saving.
+     */
     private fun showUrlInputDialog() {
-        val input = EditText(this).apply {
+        val nameInput = EditText(this).apply {
+            hint = "Script name (optional)"
+        }
+        val urlInput = EditText(this).apply {
             hint = "https://example.com/script.user.js"
             inputType = android.text.InputType.TYPE_TEXT_VARIATION_URI
         }
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 8)
+            addView(nameInput)
+            addView(urlInput)
+        }
+
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.script_from_url))
-            .setView(input)
-            .setPositiveButton("Add") { _, _ ->
-                val url = input.text.toString().trim()
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    addScript(UserScript(name = url.substringAfterLast("/"), source = url, code = "/* from URL */"))
+            .setView(layout)
+            .setPositiveButton("Fetch & Add") { _, _ ->
+                val rawUrl = urlInput.text.toString().trim()
+                val name   = nameInput.text.toString().trim()
+                if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+                    fetchScriptFromUrl(rawUrl, name)
                 } else {
                     Toast.makeText(this, R.string.invalid_url, Toast.LENGTH_SHORT).show()
                 }
@@ -310,14 +324,62 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Fetch the JS content from [url] on a background thread, then save and
+     * refresh the list on the main thread.
+     */
+    private fun fetchScriptFromUrl(url: String, nameHint: String) {
+        val progressDialog = MaterialAlertDialogBuilder(this)
+            .setTitle("Fetching script…")
+            .setMessage(url)
+            .setCancelable(false)
+            .show()
+
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 10_000
+                        readTimeout    = 15_000
+                        requestMethod  = "GET"
+                        setRequestProperty("User-Agent", "Mozilla/5.0")
+                    }
+                    try {
+                        if (conn.responseCode !in 200..299) {
+                            error("HTTP ${conn.responseCode}: ${conn.responseMessage}")
+                        }
+                        conn.inputStream.bufferedReader().readText()
+                    } finally {
+                        conn.disconnect()
+                    }
+                }
+            }
+            progressDialog.dismiss()
+
+            result.onSuccess { code ->
+                // Try to extract @name from UserScript metadata block
+                val metaName = Regex("""//\s*@name\s+(.+)""").find(code)?.groupValues?.getOrNull(1)?.trim()
+                val finalName = nameHint.ifEmpty { metaName ?: url.substringAfterLast("/") }
+                addScript(UserScript(name = finalName, source = url, code = code))
+            }.onFailure { err ->
+                Toast.makeText(this@SettingsActivity,
+                    "Failed to fetch script: ${err.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     /** Dialog: type or paste raw JS. */
-    private fun showTextInputDialog() {
-        val nameInput = EditText(this).apply { hint = "Script name" }
+    private fun showTextInputDialog(existingScript: UserScript? = null, index: Int = -1) {
+        val nameInput = EditText(this).apply {
+            hint = "Script name"
+            setText(existingScript?.name ?: "")
+        }
         val codeInput = EditText(this).apply {
             hint = "// JavaScript code here…"
-            minLines = 5
-            maxLines = 12
+            minLines = 6
+            maxLines = 14
             gravity = android.view.Gravity.TOP
+            setText(existingScript?.code ?: "")
         }
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -325,26 +387,51 @@ class SettingsActivity : AppCompatActivity() {
             addView(nameInput)
             addView(codeInput)
         }
+        val title = if (existingScript != null) "Edit Script" else getString(R.string.script_from_text)
         MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.script_from_text))
+            .setTitle(title)
             .setView(layout)
-            .setPositiveButton("Add") { _, _ ->
+            .setPositiveButton(if (existingScript != null) "Save" else "Add") { _, _ ->
                 val name = nameInput.text.toString().trim().ifEmpty { "Custom Script" }
                 val code = codeInput.text.toString().trim()
                 if (code.isNotEmpty()) {
-                    addScript(UserScript(name = name, source = "text input", code = code))
+                    if (existingScript != null && index >= 0) {
+                        updateScript(index, existingScript.copy(name = name, code = code))
+                    } else {
+                        addScript(UserScript(name = name, source = "text input", code = code))
+                    }
                 }
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
+    /** Edit dialog for an already-added script (any source type). */
+    private fun showEditScriptDialog(scripts: MutableList<UserScript>, index: Int) {
+        val script = scripts[index]
+        val options = mutableListOf("Edit name & code")
+        if (script.source.startsWith("http")) options.add("Re-fetch from URL")
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Edit \"${script.name}\"")
+            .setItems(options.toTypedArray()) { _, which ->
+                when {
+                    which == 0 -> showTextInputDialog(script, index)
+                    which == 1 -> fetchScriptFromUrl(script.source, script.name)
+                }
+            }
+            .show()
+    }
+
     /** Read file content from URI and add as script. */
     private fun importScriptFromFile(uri: Uri) {
         try {
-            val content = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return
+            val code     = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return
             val fileName = uri.lastPathSegment ?: "script.js"
-            addScript(UserScript(name = fileName, source = "local file", code = content))
+            // Try to extract @name from UserScript metadata
+            val metaName = Regex("""//\s*@name\s+(.+)""").find(code)?.groupValues?.getOrNull(1)?.trim()
+            val finalName = metaName ?: fileName
+            addScript(UserScript(name = finalName, source = "local file: $fileName", code = code))
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to read file: ${e.message}", Toast.LENGTH_SHORT).show()
         }
@@ -356,6 +443,16 @@ class SettingsActivity : AppCompatActivity() {
         saveScripts(scripts)
         refreshScriptsList()
         Toast.makeText(this, R.string.script_added, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateScript(index: Int, updated: UserScript) {
+        val scripts = loadScripts()
+        if (index < scripts.size) {
+            scripts[index] = updated
+            saveScripts(scripts)
+            refreshScriptsList()
+            Toast.makeText(this, "Script updated", Toast.LENGTH_SHORT).show()
+        }
     }
 
     // ── Script persistence ────────────────────────────────────────────────────
@@ -387,9 +484,9 @@ class SettingsActivity : AppCompatActivity() {
         val arr = JSONArray()
         scripts.forEach { s ->
             arr.put(JSONObject().apply {
-                put("name", s.name)
-                put("source", s.source)
-                put("code", s.code)
+                put("name",    s.name)
+                put("source",  s.source)
+                put("code",    s.code)
                 put("enabled", s.enabled)
             })
         }
