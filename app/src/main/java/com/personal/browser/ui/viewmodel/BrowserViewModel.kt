@@ -1,5 +1,6 @@
 package com.personal.browser.ui.viewmodel
 
+import android.graphics.Bitmap
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -18,8 +19,8 @@ class BrowserViewModel @Inject constructor(
     private val historyRepository: HistoryRepository
 ) : ViewModel() {
 
-    private val _tabs = MutableLiveData<MutableList<Tab>>(mutableListOf())
-    val tabs: LiveData<MutableList<Tab>> = _tabs
+    private val _tabs = MutableLiveData<List<Tab>>(emptyList())
+    val tabs: LiveData<List<Tab>> = _tabs
 
     private val _activeTabIndex = MutableLiveData(0)
     val activeTabIndex: LiveData<Int> = _activeTabIndex
@@ -35,15 +36,13 @@ class BrowserViewModel @Inject constructor(
 
     /** Call this once from MainActivity.onCreate with the homepage URL from SharedPreferences. */
     fun initWithHomepage(homepageUrl: String) {
-        // Only seed the first tab if none exists yet (guards against config-change recreation)
-        val list = _tabs.value ?: mutableListOf()
-        if (list.isEmpty()) {
+        if (_tabs.value.isNullOrEmpty()) {
             openNewTab(homepageUrl)
         }
     }
 
     fun openNewTab(url: String = "") {
-        val list = _tabs.value ?: mutableListOf()
+        val list = _tabs.value?.toMutableList() ?: mutableListOf()
         list.add(Tab(url = url))
         _tabs.value = list
         _activeTabIndex.value = list.size - 1
@@ -51,7 +50,7 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun closeTab(index: Int) {
-        val list = _tabs.value ?: return
+        val list = _tabs.value?.toMutableList() ?: return
         if (list.size <= 1) {
             // Keep at least one tab, reset it instead of removing
             list[0] = Tab()
@@ -76,7 +75,7 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun updateActiveTab(update: Tab.() -> Unit) {
-        val list = _tabs.value ?: return
+        val list = _tabs.value?.toMutableList() ?: return
         val idx  = _activeTabIndex.value ?: 0
         if (idx in list.indices) {
             list[idx] = list[idx].copy().apply(update)
@@ -128,6 +127,15 @@ class BrowserViewModel @Inject constructor(
         }
     }
 
+    fun onReceivedIcon(tabId: String, icon: Bitmap) {
+        val list = _tabs.value?.toMutableList() ?: return
+        val idx = list.indexOfFirst { it.id == tabId }
+        if (idx >= 0) {
+            list[idx] = list[idx].copy(favicon = icon)
+            _tabs.value = list
+        }
+    }
+
     fun toggleBookmark() {
         val tab = activeTab ?: return
         if (tab.url.isEmpty()) return
@@ -145,8 +153,6 @@ class BrowserViewModel @Inject constructor(
 
     /**
      * Suspend version of clearHistory for use with runBlocking in onDestroy.
-     * Unlike clearHistory(), this guarantees the Room DELETE completes before
-     * the caller returns, which matters when the process is about to exit.
      */
     suspend fun clearHistorySync() {
         historyRepository.clearHistory()
@@ -180,7 +186,4 @@ class BrowserViewModel @Inject constructor(
             _isBookmarked.value = bookmarkRepository.isBookmarked(url)
         }
     }
-
-    // NOTE: init {} intentionally left empty — MainActivity calls initWithHomepage()
-    // after reading SharedPreferences so the homepage URL is correct.
 }

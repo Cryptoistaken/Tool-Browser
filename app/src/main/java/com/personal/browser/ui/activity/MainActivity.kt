@@ -312,21 +312,24 @@ class MainActivity : AppCompatActivity() {
             onTabClick = { index -> viewModel.switchTab(index); sheet.dismiss() },
             onTabClose = { index ->
                 viewModel.closeTab(index)
-                if ((viewModel.tabs.value?.size ?: 0) == 0) sheet.dismiss()
+                if ((viewModel.tabs.value?.size ?: 0) == 0) {
+                    // All tabs closed? Let ViewModel handle it (it resets the last tab)
+                    // If we want to dismiss the sheet, we should do it here if needed.
+                }
             }
         )
         rv.adapter = tabsAdapter
-        tabsAdapter.submitList(viewModel.tabs.value?.toList() ?: emptyList())
-        webViews.forEach { (tabId, wv) ->
-            val bmp = wv.favicon
-            if (bmp != null) tabsAdapter.updateFavicon(tabId, bmp)
+        viewModel.tabs.observe(this) { tabs ->
+            tabsAdapter.submitList(tabs)
+            if (tabs.isEmpty()) sheet.dismiss()
         }
+        
         val container = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
         }
         val headerBtn = android.widget.Button(this).apply {
             text = "+ New Tab"
-            setOnClickListener { viewModel.openNewTab(getHomepageUrl()); sheet.dismiss() }
+            setOnClickListener { viewModel.openNewTab(getHomepageUrl()) }
         }
         container.addView(headerBtn, android.widget.LinearLayout.LayoutParams(
             android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
@@ -452,9 +455,10 @@ class MainActivity : AppCompatActivity() {
 
                 override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
                     super.doUpdateVisitedHistory(view, url, isReload)
-                    // SPA re-injection is handled by the pushState bridge installed in
-                    // onPageFinished. Doing it here as well caused double-injection on
-                    // normal loads and premature injection before new content rendered.
+                    // Re-inject on visited history change for SPAs
+                    if (this@apply === currentWebView) {
+                        injectScripts(view)
+                    }
                 }
 
                 override fun shouldOverrideUrlLoading(
@@ -488,12 +492,7 @@ class MainActivity : AppCompatActivity() {
                 override fun onReceivedIcon(view: WebView, icon: Bitmap) {
                     super.onReceivedIcon(view, icon)
                     val tabId = webViews.entries.firstOrNull { it.value === view }?.key ?: return
-                    val tabList = viewModel.tabs.value ?: return
-                    val tabIdx  = tabList.indexOfFirst { it.id == tabId }
-                    if (tabIdx >= 0) {
-                        tabList[tabIdx] = tabList[tabIdx].copy(favicon = icon)
-                        viewModel.tabs.value?.set(tabIdx, tabList[tabIdx])
-                    }
+                    viewModel.onReceivedIcon(tabId, icon)
                 }
             }
         }
@@ -503,14 +502,6 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Inject all active user scripts into [view].
-     *
-     * Each script is wrapped to run after the DOM is ready: if the document is
-     * still loading the wrapper defers via DOMContentLoaded, otherwise it runs
-     * immediately. This covers both normal page loads (called from onPageFinished)
-     * and SPA navigation callbacks triggered by [injectSpaNavigationBridge].
-     *
-     * Backticks and backslashes in the script body are escaped before being
-     * embedded in the JS template literal so arbitrary user code survives intact.
      */
     private fun injectScripts(view: WebView) {
         if (!prefs.getBoolean(SettingsActivity.PREF_SCRIPTS_ENABLED, true)) return
@@ -549,13 +540,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Inject a one-time bridge that monkey-patches pushState/replaceState and
      * listens for popstate so we can re-run user scripts after every SPA
-     * client-side navigation (Instagram, Facebook, Gmail, etc.).
-     *
-     * The bridge is idempotent — calling this on every onPageFinished is safe
-     * because it checks __toolBrowserBridgeInstalled before installing.
-     *
-     * When a route change is detected, a 350 ms delay lets the new route's DOM
-     * settle before scripts run.
+     * client-side navigation.
      */
     private fun injectSpaNavigationBridge(view: WebView) {
         val js = "(function(){\n" +
@@ -644,19 +629,6 @@ class MainActivity : AppCompatActivity() {
         updateNavState()
     }
 
-    /**
-     * Synchronous clear used on exit (onDestroy).
-     *
-     * Called BEFORE webViews.forEach { it.destroy() } so each WebView is still
-     * alive when clearCache/clearHistory are called.
-     *
-     * The async removeAllCookies callback variant is unreliable when the process
-     * is dying, so we use removeAllCookies(null) + flush() instead.
-     *
-     * viewModel.clearHistorySync() is a suspend fun exposed for this purpose;
-     * runBlocking blocks onDestroy until the Room DELETE completes so history
-     * is actually erased before the process exits.
-     */
     private fun performClearDataSync() {
         webViews.values.forEach { wv ->
             wv.clearCache(true)
