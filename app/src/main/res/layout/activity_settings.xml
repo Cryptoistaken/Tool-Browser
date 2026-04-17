@@ -31,7 +31,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="16dp"
-            android:text="Ad blocking"
+            android:text="Settings"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="@color/on_surface" />
@@ -56,9 +56,280 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- GENERAL SETTINGS CONTAINER -->
+            <LinearLayout
+                android:id="@+id/generalContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Section: Browser -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="8dp"
+                    android:text="Browser"
+                    android:textSize="12sp"
+                    android:textAllCaps="true"
+                    android:textColor="@color/primary"
+                    android:letterSpacing="0.1" />
+
+                <!-- Homepage URL -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Default homepage URL"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="Page loaded when opening a new tab"
+                        android:textSize="13sp"
+                        android:textColor="@color/on_surface_variant" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp"
+                        app:hintEnabled="false">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etHomepageUrl"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textUri|textNoSuggestions"
+                            android:imeOptions="actionDone"
+                            android:singleLine="true"
+                            android:hint="https://www.google.com"
+                            android:textSize="14sp"
+                            android:textColor="@color/on_surface" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:marginHorizontal="16dp"
+                    android:background="@color/outline"
+                    android:alpha="0.15" />
+
+                <!-- Section: Privacy -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="8dp"
+                    android:text="Privacy"
+                    android:textSize="12sp"
+                    android:textAllCaps="true"
+                    android:textColor="@color/primary"
+                    android:letterSpacing="0.1" />
+
+                <!-- Clear data on exit -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView
+                        android:id="@+id/tvClearOnExitTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Clear browser data on exit"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface"
+                        android:layout_toStartOf="@+id/switchClearOnExit"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:paddingEnd="16dp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/tvClearOnExitTitle"
+                        android:layout_marginTop="4dp"
+                        android:text="Clears cache, cookies and history when the app is closed"
+                        android:textSize="13sp"
+                        android:textColor="@color/on_surface_variant"
+                        android:layout_toStartOf="@+id/switchClearOnExit"
+                        android:layout_alignParentStart="true"
+                        android:paddingEnd="16dp" />
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchClearOnExit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:checked="false" />
+                </RelativeLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:marginHorizontal="16dp"
+                    android:background="@color/outline"
+                    android:alpha="0.15" />
+
+                <!-- Clear data now button -->
+                <LinearLayout
+                    android:id="@+id/btnClearDataNow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_delete"
+                        android:layout_marginEnd="16dp"
+                        android:tint="@color/on_surface_variant"
+                        android:contentDescription="Clear" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Clear browsing data now"
+                        android:textSize="16sp"
+                        android:textColor="@color/on_surface" />
+                </LinearLayout>
+
+                <!-- Section: Content -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="8dp"
+                    android:text="Content"
+                    android:textSize="12sp"
+                    android:textAllCaps="true"
+                    android:textColor="@color/primary"
+                    android:letterSpacing="0.1" />
+
+                <!-- Ad Blocking shortcut -->
+                <LinearLayout
+                    android:id="@+id/btnGoAdBlocking"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_security"
+                        android:layout_marginEnd="16dp"
+                        android:tint="@color/on_surface_variant"
+                        android:contentDescription="Ad Blocking" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ad blocking"
+                            android:textSize="16sp"
+                            android:textColor="@color/on_surface" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Block ads and trackers"
+                            android:textSize="13sp"
+                            android:textColor="@color/on_surface_variant" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        android:tint="@color/on_surface_variant"
+                        android:contentDescription="Open" />
+                </LinearLayout>
+
+                <!-- User Scripts shortcut -->
+                <LinearLayout
+                    android:id="@+id/btnGoUserScripts"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_copy"
+                        android:layout_marginEnd="16dp"
+                        android:tint="@color/on_surface_variant"
+                        android:contentDescription="User Scripts" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="User scripts"
+                            android:textSize="16sp"
+                            android:textColor="@color/on_surface" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Manage and run custom scripts"
+                            android:textSize="13sp"
+                            android:textColor="@color/on_surface_variant" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        android:tint="@color/on_surface_variant"
+                        android:contentDescription="Open" />
+                </LinearLayout>
+
+            </LinearLayout>
 
             <!-- AD BLOCKING CONTAINER -->
             <LinearLayout
@@ -66,7 +337,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <!-- Item 1 -->
                 <RelativeLayout
@@ -86,7 +357,7 @@
                         android:layout_height="wrap_content"
                         android:layout_below="@id/tvAdBlockTitle1"
                         android:layout_marginTop="4dp"
-                        android:text="Enabled: 3981 ads blocked, 309.4 MB saved"
+                        android:text="Block ads and trackers while browsing"
                         android:textSize="14sp"
                         android:textColor="@color/on_surface_variant" />
                     <com.google.android.material.switchmaterial.SwitchMaterial
@@ -300,7 +571,7 @@
                 </RelativeLayout>
             </LinearLayout>
 
-        </FrameLayout>
+        </LinearLayout>
     </ScrollView>
 
 </LinearLayout>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Browser</string>
+    <string name="app_name">Tool Browser</string>
     <string name="search_or_enter_url">Search or enter URL</string>
     <string name="back">Back</string>
     <string name="forward">Forward</string>
@@ -26,4 +26,7 @@
     <string name="ad_blocker">Ad Blocker</string>
     <string name="ad_block_enabled">Ad Blocking Enabled</string>
     <string name="ad_block_disabled">Ad Blocking Disabled</string>
+    <string name="clear_on_exit">Clear browser data on exit</string>
+    <string name="homepage_url">Default homepage URL</string>
+    <string name="general_settings">General Settings</string>
 </resources>

@@ -28,10 +28,19 @@ class BrowserViewModel @Inject constructor(
     val isBookmarked: LiveData<Boolean> = _isBookmarked
 
     val bookmarks = bookmarkRepository.getAllBookmarks().asLiveData()
-    val history = historyRepository.getHistory().asLiveData()
+    val history   = historyRepository.getHistory().asLiveData()
 
     val activeTab: Tab?
         get() = _tabs.value?.getOrNull(_activeTabIndex.value ?: 0)
+
+    /** Call this once from MainActivity.onCreate with the homepage URL from SharedPreferences. */
+    fun initWithHomepage(homepageUrl: String) {
+        // Only seed the first tab if none exists yet (guards against config-change recreation)
+        val list = _tabs.value ?: mutableListOf()
+        if (list.isEmpty()) {
+            openNewTab(homepageUrl)
+        }
+    }
 
     fun openNewTab(url: String = "") {
         val list = _tabs.value ?: mutableListOf()
@@ -44,6 +53,7 @@ class BrowserViewModel @Inject constructor(
     fun closeTab(index: Int) {
         val list = _tabs.value ?: return
         if (list.size <= 1) {
+            // Keep at least one tab, reset it instead of removing
             list[0] = Tab()
             _tabs.value = list
             return
@@ -67,7 +77,7 @@ class BrowserViewModel @Inject constructor(
 
     fun updateActiveTab(update: Tab.() -> Unit) {
         val list = _tabs.value ?: return
-        val idx = _activeTabIndex.value ?: 0
+        val idx  = _activeTabIndex.value ?: 0
         if (idx in list.indices) {
             list[idx] = list[idx].copy().apply(update)
             _tabs.value = list
@@ -76,10 +86,10 @@ class BrowserViewModel @Inject constructor(
 
     fun onPageStarted(url: String, title: String?) {
         updateActiveTab {
-            this.url = url
-            this.title = title ?: "Loading..."
+            this.url      = url
+            this.title    = title ?: "Loading…"
             this.isLoading = true
-            this.progress = 10
+            this.progress  = 10
         }
         viewModelScope.launch {
             _isBookmarked.value = bookmarkRepository.isBookmarked(url)
@@ -88,10 +98,10 @@ class BrowserViewModel @Inject constructor(
 
     fun onPageFinished(url: String, title: String?) {
         updateActiveTab {
-            this.url = url
-            this.title = title ?: url
+            this.url       = url
+            this.title     = title ?: url
             this.isLoading = false
-            this.progress = 100
+            this.progress  = 100
         }
         if (url.isNotEmpty() && !url.startsWith("about:")) {
             viewModelScope.launch {
@@ -107,7 +117,7 @@ class BrowserViewModel @Inject constructor(
 
     fun onNavigationStateChanged(canGoBack: Boolean, canGoForward: Boolean) {
         updateActiveTab {
-            this.canGoBack = canGoBack
+            this.canGoBack    = canGoBack
             this.canGoForward = canGoForward
         }
     }
@@ -140,7 +150,6 @@ class BrowserViewModel @Inject constructor(
         }
     }
 
-    init {
-        openNewTab()
-    }
+    // NOTE: init {} intentionally left empty — MainActivity calls initWithHomepage()
+    // after reading SharedPreferences so the homepage URL is correct.
 }
