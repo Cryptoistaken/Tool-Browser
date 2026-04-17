@@ -112,20 +112,19 @@ Relevant resource directories:
 - Icon: `@drawable/ic_copy`
 
 ### Clear data on exit
-- Triggered in both `onStop` and `onDestroy` when `isFinishing` is true and `PREF_CLEAR_ON_EXIT` is set. A `didClearOnExit` flag prevents double-clearing if both run.
-- `onStop` handles the common case (user swipes app away from recents); `onDestroy` is a fallback for explicit `finish()` calls. `isFinishing` is only true when the activity is truly finishing, not when it's backgrounded.
-- Called **before** `webViews.values.forEach { it.destroy() }` so each WebView is still alive when `clearCache`/`clearHistory` are invoked.
-- Uses `performClearDataSync()` which calls `cookieManager.removeAllCookies(null)` + `cookieManager.flush()` synchronously — the async callback variant is unreliable when the process is about to die.
-- Room history is cleared via `runBlocking { viewModel.clearHistorySync() }` — this blocks until the DELETE finishes, ensuring history is actually erased before the process exits. `clearHistorySync()` is a `suspend fun` on `BrowserViewModel` that calls `historyRepository.clearHistory()` directly.
-- `performClearData(showToast)` (async variant with `viewModelScope.launch`) is still used for the manual "Clear Data" menu action.
+- **Strategy: arm-on-exit, clear-on-start.** Because Android gives no hard guarantee that `onStop`/`onDestroy` will run to completion before the process is killed, clearing at app death is unreliable. Instead:
+  - `onStop` (when `isFinishing == true` and `PREF_CLEAR_ON_EXIT` is set) writes `PREF_PENDING_CLEAR = true` to SharedPreferences. This survives process death.
+  - `onCreate` checks `PREF_PENDING_CLEAR` first thing — before the UI loads — and calls `performClearDataSync()`, then resets the flag.
+- `performClearDataSync()` clears WebView caches/history/form data/SSL prefs, deletes WebStorage, removes all cookies synchronously (`removeAllCookies(null)` + `flush()`), clears WebViewDatabase, and calls `runBlocking { viewModel.clearHistorySync() }` to wipe Room history.
+- `performClearData(showToast)` (async variant) is still used for the manual "Clear Data" menu action.
 
 ### User scripts
-- Injection entry point is `injectScripts(view: WebView)`, called from `onPageFinished`.
-- Scripts are wrapped to respect `document.readyState`: if the document is still loading the wrapper defers via `DOMContentLoaded`; otherwise it runs immediately. This prevents scripts from running before the DOM exists.
+- Injection entry point is `injectScripts(view: WebView)`, called from `onPageFinished` only.
+- Scripts are wrapped to respect `document.readyState`: if the document is still loading the wrapper defers via `DOMContentLoaded`; otherwise it runs immediately.
 - Backticks, backslashes, and `${` in user script code are escaped before embedding so arbitrary JS survives the string wrapper intact.
 - SPA navigation (Instagram, Facebook, Gmail, etc.) is handled by `injectSpaNavigationBridge(view)`, also called from `onPageFinished` (before `injectScripts`). The bridge monkey-patches `history.pushState` and `history.replaceState` and listens for `popstate`, then calls `window.__toolBrowserRunScripts()` after a 350 ms settle delay so scripts re-run after each client-side route change. `injectScripts` registers `window.__toolBrowserRunScripts = __runAll` so the bridge always finds it.
 - The bridge is idempotent — it checks `window.__toolBrowserBridgeInstalled` before installing, so re-calling `onPageFinished` on the same page is safe.
-- `doUpdateVisitedHistory` is no longer used for script injection — it caused double-injection on normal loads and premature injection before new content rendered on SPAs.
+- **`doUpdateVisitedHistory` is NOT used for script injection** — it caused double-injection on normal loads (once from `onPageFinished` and again from `doUpdateVisitedHistory`) and premature injection before new content rendered on SPAs. The SPA bridge's `window.__toolBrowserRunScripts` is the sole re-run mechanism for client-side navigation.
 - Observe LiveData with `viewLifecycleOwner` — sheets use a dedicated local `LifecycleOwner` wrapper to avoid leaking Activity observers after dismiss.
 
 ### SwipeRefreshLayout + WebView

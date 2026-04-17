@@ -63,7 +63,10 @@ class MainActivity : AppCompatActivity() {
 
     // AdBlock state (refreshed on resume)
     private var isAdBlockEnabled = true
-    private var didClearOnExit = false
+    companion object {
+        private const val PREF_PENDING_CLEAR = "pref_pending_clear"
+    }
+
     private val adBlockDomains = setOf(
         "doubleclick.net", "googleadservices.com", "googlesyndication.com",
         "adservice.google.com", "amazon-adsystem.com", "criteo.com", "adnxs.com",
@@ -92,6 +95,15 @@ class MainActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences("browser_prefs", MODE_PRIVATE)
 
+        // If the user had "clear on exit" enabled, clear all data now (at startup)
+        // before the UI loads. We can't reliably clear at process death, so we
+        // arm PREF_PENDING_CLEAR when the setting is on and clear it here on the
+        // next launch.
+        if (prefs.getBoolean(PREF_PENDING_CLEAR, false)) {
+            prefs.edit().putBoolean(PREF_PENDING_CLEAR, false).apply()
+            performClearDataSync()
+        }
+
         setupCopyCookieButton()
         setupUrlBar()
         setupNavButtons()
@@ -118,25 +130,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Perform clear-on-exit here as well because onDestroy is not guaranteed
-        // to be called when the system kills the process (swipe from recents, etc.).
-        // We guard with a flag so we don't double-clear if onDestroy also runs.
+        // Arm the pending-clear flag whenever the setting is on and we're finishing.
+        // The actual clearing happens at the NEXT launch in onCreate, because at
+        // process-death time there is no guarantee onStop/onDestroy will complete.
         if (isFinishing && prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
-            if (!didClearOnExit) {
-                didClearOnExit = true
-                performClearDataSync()
-            }
+            prefs.edit().putBoolean(PREF_PENDING_CLEAR, true).apply()
         }
     }
 
     override fun onDestroy() {
-        // Clear BEFORE destroying WebViews so clearCache/clearHistory operate on live instances.
-        if (isFinishing && prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
-            if (!didClearOnExit) {
-                didClearOnExit = true
-                performClearDataSync()
-            }
-        }
         webViews.values.forEach { it.destroy() }
         webViews.clear()
         super.onDestroy()
@@ -451,14 +453,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     return super.shouldInterceptRequest(view, request)
-                }
-
-                override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
-                    super.doUpdateVisitedHistory(view, url, isReload)
-                    // Re-inject on visited history change for SPAs
-                    if (this@apply === currentWebView) {
-                        injectScripts(view)
-                    }
                 }
 
                 override fun shouldOverrideUrlLoading(
