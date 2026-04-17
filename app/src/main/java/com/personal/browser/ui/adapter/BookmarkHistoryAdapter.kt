@@ -25,14 +25,16 @@ class BookmarkHistoryAdapter(
         fun bind(item: BookmarkHistoryItem) {
             when (item) {
                 is BookmarkHistoryItem.BookmarkItem -> {
-                    binding.itemTitle.text = item.bookmark.title
-                    binding.itemUrl.text = item.bookmark.url
-                    binding.root.setOnClickListener { onItemClick(item.bookmark.url) }
+                    binding.itemTitle.text = item.bookmark.title.ifEmpty { item.bookmark.url }
+                    binding.itemUrl.text   = item.bookmark.url
+                    binding.root.setOnClickListener  { onItemClick(item.bookmark.url) }
+                    binding.btnDeleteItem.setOnClickListener { onItemDelete(item) }
                 }
                 is BookmarkHistoryItem.HistoryItem -> {
-                    binding.itemTitle.text = item.entry.title
-                    binding.itemUrl.text = item.entry.url
-                    binding.root.setOnClickListener { onItemClick(item.entry.url) }
+                    binding.itemTitle.text = item.entry.title.ifEmpty { item.entry.url }
+                    binding.itemUrl.text   = item.entry.url
+                    binding.root.setOnClickListener  { onItemClick(item.entry.url) }
+                    binding.btnDeleteItem.setOnClickListener { onItemDelete(item) }
                 }
             }
         }
@@ -58,17 +60,20 @@ class BookmarkHistoryAdapter(
     }
 
     class DiffCallback : DiffUtil.ItemCallback<BookmarkHistoryItem>() {
-        override fun areItemsTheSame(oldItem: BookmarkHistoryItem, newItem: BookmarkHistoryItem): Boolean {
-            return when {
-                oldItem is BookmarkHistoryItem.BookmarkItem && newItem is BookmarkHistoryItem.BookmarkItem ->
-                    oldItem.bookmark.id == newItem.bookmark.id
-                oldItem is BookmarkHistoryItem.HistoryItem && newItem is BookmarkHistoryItem.HistoryItem ->
-                    oldItem.entry.id == newItem.entry.id
-                else -> false
-            }
+        override fun areItemsTheSame(
+            oldItem: BookmarkHistoryItem,
+            newItem: BookmarkHistoryItem
+        ): Boolean = when {
+            oldItem is BookmarkHistoryItem.BookmarkItem && newItem is BookmarkHistoryItem.BookmarkItem ->
+                oldItem.bookmark.id == newItem.bookmark.id
+            oldItem is BookmarkHistoryItem.HistoryItem && newItem is BookmarkHistoryItem.HistoryItem ->
+                oldItem.entry.id == newItem.entry.id
+            else -> false
         }
 
-        override fun areContentsTheSame(oldItem: BookmarkHistoryItem, newItem: BookmarkHistoryItem) =
-            oldItem == newItem
+        override fun areContentsTheSame(
+            oldItem: BookmarkHistoryItem,
+            newItem: BookmarkHistoryItem
+        ) = oldItem == newItem
     }
 }

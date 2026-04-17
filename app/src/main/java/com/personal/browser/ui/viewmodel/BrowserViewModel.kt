@@ -143,6 +143,28 @@ class BrowserViewModel @Inject constructor(
         }
     }
 
+    /** Called when user swipes / deletes a bookmark from the bookmarks sheet. */
+    fun deleteBookmarkItem(item: com.personal.browser.ui.adapter.BookmarkHistoryItem) {
+        if (item is com.personal.browser.ui.adapter.BookmarkHistoryItem.BookmarkItem) {
+            viewModelScope.launch {
+                bookmarkRepository.removeBookmark(item.bookmark.url)
+                val activeUrl = activeTab?.url ?: ""
+                if (activeUrl.isNotEmpty()) {
+                    _isBookmarked.value = bookmarkRepository.isBookmarked(activeUrl)
+                }
+            }
+        }
+    }
+
+    /** Called when user swipes / deletes a history entry from the history sheet. */
+    fun deleteHistoryItem(item: com.personal.browser.ui.adapter.BookmarkHistoryItem) {
+        if (item is com.personal.browser.ui.adapter.BookmarkHistoryItem.HistoryItem) {
+            viewModelScope.launch {
+                historyRepository.deleteEntry(item.entry.id)
+            }
+        }
+    }
+
     private fun checkBookmarkStatus() {
         val url = activeTab?.url ?: return
         viewModelScope.launch {

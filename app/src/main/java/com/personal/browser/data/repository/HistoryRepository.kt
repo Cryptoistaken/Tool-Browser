@@ -21,4 +21,8 @@ class HistoryRepository @Inject constructor(
     suspend fun clearHistory() {
         historyDao.clearAll()
     }
+
+    suspend fun deleteEntry(id: Long) {
+        historyDao.deleteById(id)
+    }
 }

@@ -95,8 +95,30 @@ Relevant resource directories:
 - Pull-to-refresh / swipe-to-refresh on WebView
 - Desktop site toggle (`toggleDesktopMode()` in `MainActivity`)
 - Share & copy URL actions
-- Clear browsing data
+- **Copy Cookie button** (`btnCopyCookie`) — top-left dedicated button, visible only on http/https pages.
+  Copies the current page's cookies to clipboard, triggers haptic vibration feedback, and shows a
+  Snackbar success notification. Uses `ic_copy` drawable. Requires `VIBRATE` permission in manifest.
+- Clear browsing data on demand and optionally on exit
 - Dark mode (follows system theme)
+
+---
+
+## Key Implementation Notes
+
+### btnCopyCookie (top-left icon)
+- **Visible** when the current URL starts with `http://` or `https://`
+- **Hidden** (INVISIBLE) on the new tab / about:blank screen
+- On click: calls `copyCurrentCookies()`, vibrates via `VibrationEffect` (API 26+) with fallback, shows Snackbar "Cookies copied"
+- Icon: `@drawable/ic_copy`
+
+### Bookmark / History sheets
+- Observe LiveData with `viewLifecycleOwner` — sheets use a dedicated local `LifecycleOwner` wrapper to avoid leaking Activity observers after dismiss.
+
+### SwipeRefreshLayout + WebView
+- `SwipeRefreshLayout.setOnChildScrollUpCallback` is set so pull-to-refresh only triggers when the WebView is scrolled to the very top, preventing accidental refreshes mid-page.
+
+### ProgressBar
+- Initial `android:visibility="invisible"` (not `gone`) avoids layout re-flow on show/hide.
 
 ---
 
@@ -130,6 +152,7 @@ Each feature is cleanly isolated:
 | Share | `shareCurrentUrl()` in `MainActivity` |
 | URL handling | `UrlUtils` |
 | Settings screen | `SettingsActivity`, `activity_settings.xml` |
+| Copy Cookie button | `btnCopyCookie` in `activity_main.xml`, `copyCurrentCookies()` in `MainActivity` |
 
 ---
 
@@ -159,3 +182,4 @@ base64 browser.jks | pbcopy   # macOS
 - The `ui/fragment/` directory exists but is currently empty — fragments are not yet used.
 - WebView logic (client, chrome client, JS interface) lives entirely inside `MainActivity.kt`.
 - `UrlUtils.kt` handles smart search fallback: if the input is not a valid URL, it constructs a Google search query.
+- `VIBRATE` permission is declared in `AndroidManifest.xml` for haptic feedback on the copy-cookie button.

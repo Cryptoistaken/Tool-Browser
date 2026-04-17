@@ -22,7 +22,7 @@
     <string name="copy_cookie">Copy Cookies</string>
     <string name="user_scripts">User Scripts</string>
     <string name="settings">Settings</string>
-    <string name="cookies_copied">Cookies copied</string>
+    <string name="cookies_copied">Cookies copied to clipboard</string>
     <string name="ad_blocker">Ad Blocker</string>
     <string name="ad_block_enabled">Ad Blocking Enabled</string>
     <string name="ad_block_disabled">Ad Blocking Disabled</string>

@@ -24,13 +24,14 @@
             android:elevation="4dp">
 
             <ImageButton
-                android:id="@+id/btnSiteInfo"
+                android:id="@+id/btnCopyCookie"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_history"
-                android:contentDescription="@string/settings"
-                android:padding="8dp" />
+                android:src="@drawable/ic_copy"
+                android:contentDescription="@string/copy_cookie"
+                android:padding="8dp"
+                android:visibility="invisible" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="0dp"
@@ -82,7 +83,7 @@
             android:layout_height="3dp"
             android:max="100"
             android:progressTint="@color/primary"
-            android:visibility="gone" />
+            android:visibility="invisible" />
 
         <!-- WebView Container -->
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
