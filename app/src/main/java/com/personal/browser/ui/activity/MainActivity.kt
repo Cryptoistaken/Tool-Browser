@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         \"pagead2.googlesyndication.com\", \"ads.google.com\", \"adtago.s3.amazonaws.com\"
     )
 
-    // ── Settings launcher ─────────────────────────────────────────────────────
+    //  Settings launcher 
 
     private val settingsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity() {
         applyThemeFromPrefs()
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    //  Lifecycle 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyThemeFromPrefs()          // apply before setContentView
@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // ── Theme helper ──────────────────────────────────────────────────────────
+    //  Theme helper 
 
     private fun applyThemeFromPrefs() {
         val prefs = getSharedPreferences(\"browser_prefs\", MODE_PRIVATE)
@@ -134,7 +134,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // ── Cookie button ─────────────────────────────────────────────────────────
+    //  Cookie button 
 
     private fun setupCopyCookieButton() {
         binding.btnCopyCookie.setOnClickListener { copyCurrentCookies() }
@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnCopyCookie.isInvisible = !onWebPage
     }
 
-    // ── Menu button (top-right ···) ───────────────────────────────────────────
+    //  Menu button (top-right ) 
 
     private fun setupMenuButton() {
         binding.btnMenu.setOnClickListener { view ->
@@ -206,7 +206,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // ── URL bar ───────────────────────────────────────────────────────────────
+    //  URL bar 
 
     private fun setupUrlBar() {
         binding.urlEditText.setOnEditorActionListener { tv, actionId, event ->
@@ -223,7 +223,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Bottom nav buttons ────────────────────────────────────────────────────
+    //  Bottom nav buttons 
 
     private fun setupNavButtons() {
         binding.btnBack.setOnClickListener    { currentWebView?.goBack() }
@@ -244,7 +244,7 @@ class MainActivity : AppCompatActivity() {
         updateCopyCookieVisibility()
     }
 
-    // ── ViewModel observers ───────────────────────────────────────────────────
+    //  ViewModel observers 
 
     private fun observeViewModel() {
         viewModel.activeTabIndex.observe(this) { index ->
@@ -262,7 +262,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Tab management ────────────────────────────────────────────────────────
+    //  Tab management 
 
     private fun switchToTab(tabId: String, url: String) {
         currentWebView?.let { binding.webViewContainer.removeView(it) }
@@ -318,7 +318,7 @@ class MainActivity : AppCompatActivity() {
         sheet.show()
     }
 
-    // ── Bookmarks / History sheets ────────────────────────────────────────────
+    //  Bookmarks / History sheets 
 
     private fun showBookmarksSheet() {
         val sheet    = BottomSheetDialog(this)
@@ -364,7 +364,7 @@ class MainActivity : AppCompatActivity() {
         fun destroy() { registry.currentState = Lifecycle.State.DESTROYED }
     }
 
-    // ── WebView factory ───────────────────────────────────────────────────────
+    //  WebView factory 
 
     private fun createWebView(): WebView {
         return WebView(this).apply {
@@ -459,7 +459,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                /** Called when the browser gets a favicon — update tabs adapter live. */
+                /** Called when the browser gets a favicon  update tabs adapter live. */
                 override fun onReceivedIcon(view: WebView, icon: Bitmap) {
                     super.onReceivedIcon(view, icon)
                     // Find which tab this WebView belongs to
@@ -476,7 +476,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── User script loader ────────────────────────────────────────────────────
+    //  User script loader 
 
     /** Load enabled script codes from SharedPreferences. */
     private fun loadActiveScripts(): List<String> {
@@ -490,7 +490,7 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) { emptyList() }
     }
 
-    // ── URL loading & display ─────────────────────────────────────────────────
+    //  URL loading & display 
 
     private fun loadUrl(url: String) {
         val tab = viewModel.activeTab
@@ -520,13 +520,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Homepage URL ──────────────────────────────────────────────────────────
+    //  Homepage URL 
 
     private fun getHomepageUrl(): String =
         prefs.getString(SettingsActivity.PREF_HOMEPAGE_URL, SettingsActivity.DEFAULT_HOMEPAGE)
             ?: SettingsActivity.DEFAULT_HOMEPAGE
 
-    // ── Clear data ────────────────────────────────────────────────────────────
+    //  Clear data 
 
     private fun clearBrowsingData() = performClearData(showToast = true)
 
@@ -540,7 +540,7 @@ class MainActivity : AppCompatActivity() {
         updateNavState()
     }
 
-    // ── Desktop mode ──────────────────────────────────────────────────────────
+    //  Desktop mode 
 
     private fun toggleDesktopMode() {
         val wv = currentWebView ?: return
@@ -556,7 +556,7 @@ class MainActivity : AppCompatActivity() {
         wv.reload()
     }
 
-    // ── Share & copy ──────────────────────────────────────────────────────────
+    //  Share & copy 
 
     private fun shareCurrentUrl() {
         val url = viewModel.activeTab?.url ?: return
@@ -596,13 +596,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Snackbar ──────────────────────────────────────────────────────────────
+    //  Snackbar 
 
     private fun showSnackbar(message: String) {
         Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
     }
 
-    // ── Back press ────────────────────────────────────────────────────────────
+    //  Back press 
 
     private fun setupBackHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -616,7 +616,7 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    // ── SwipeRefresh ──────────────────────────────────────────────────────────
+    //  SwipeRefresh 
 
     private fun setupSwipeRefresh() {
         binding.swipeRefresh.setOnChildScrollUpCallback { _, _ -> currentWebView?.scrollY != 0 }
@@ -627,7 +627,7 @@ class MainActivity : AppCompatActivity() {
         binding.swipeRefresh.setColorSchemeResources(R.color.primary)
     }
 
-    // ── Keyboard ──────────────────────────────────────────────────────────────
+    //  Keyboard 
 
     private fun hideKeyboard() {
         (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
