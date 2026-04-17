@@ -112,20 +112,18 @@ Relevant resource directories:
 - Icon: `@drawable/ic_copy`
 
 ### Clear data on exit
-- **Strategy: arm-on-exit, clear-on-start.** Because Android gives no hard guarantee that `onStop`/`onDestroy` will run to completion before the process is killed, clearing at app death is unreliable. Instead:
-  - `onStop` (when `isFinishing == true` and `PREF_CLEAR_ON_EXIT` is set) writes `PREF_PENDING_CLEAR = true` to SharedPreferences. This survives process death.
-  - `onCreate` checks `PREF_PENDING_CLEAR` first thing — before the UI loads — and calls `performClearDataSync()`, then resets the flag.
-- `performClearDataSync()` clears WebView caches/history/form data/SSL prefs, deletes WebStorage, removes all cookies synchronously (`removeAllCookies(null)` + `flush()`), clears WebViewDatabase, and calls `runBlocking { viewModel.clearHistorySync() }` to wipe Room history.
+- **Strategy: Always-fresh-start if enabled.** Because Android gives no hard guarantee that `onStop`/`onDestroy` will run to completion before the process is killed, clearing at app death is unreliable.
+- `onCreate` checks `PREF_CLEAR_ON_EXIT` first thing—before the UI loads—and calls `performClearDataSync()` if it is enabled. This ensures that if the user wants data cleared on exit, the next session always starts with a clean slate.
+- `performClearDataSync()` clears WebView caches/history/form data/SSL prefs, deletes WebStorage, removes all cookies synchronously (`removeAllCookies(null)` + `flush()`), clears WebViewDatabase, and wipes Room history. It handles the case where no WebView is yet initialized by creating a temporary one if needed for cache clearing.
 - `performClearData(showToast)` (async variant) is still used for the manual "Clear Data" menu action.
 
 ### User scripts
-- Injection entry point is `injectScripts(view: WebView)`, called from `onPageFinished` only.
-- Scripts are wrapped to respect `document.readyState`: if the document is still loading the wrapper defers via `DOMContentLoaded`; otherwise it runs immediately.
-- Backticks, backslashes, and `${` in user script code are escaped before embedding so arbitrary JS survives the string wrapper intact.
-- SPA navigation (Instagram, Facebook, Gmail, etc.) is handled by `injectSpaNavigationBridge(view)`, also called from `onPageFinished` (before `injectScripts`). The bridge monkey-patches `history.pushState` and `history.replaceState` and listens for `popstate`, then calls `window.__toolBrowserRunScripts()` after a 350 ms settle delay so scripts re-run after each client-side route change. `injectScripts` registers `window.__toolBrowserRunScripts = __runAll` so the bridge always finds it.
-- The bridge is idempotent — it checks `window.__toolBrowserBridgeInstalled` before installing, so re-calling `onPageFinished` on the same page is safe.
-- **`doUpdateVisitedHistory` is NOT used for script injection** — it caused double-injection on normal loads (once from `onPageFinished` and again from `doUpdateVisitedHistory`) and premature injection before new content rendered on SPAs. The SPA bridge's `window.__toolBrowserRunScripts` is the sole re-run mechanism for client-side navigation.
-- Observe LiveData with `viewLifecycleOwner` — sheets use a dedicated local `LifecycleOwner` wrapper to avoid leaking Activity observers after dismiss.
+- Injection entry point is `injectScripts(view: WebView)`, called from `onPageFinished`.
+- **Idempotency:** Scripts are protected by `window.__toolBrowserScriptsInjected = true` to prevent multiple injections on the same page load.
+- Scripts are wrapped to respect `document.readyState`: if the document is still loading, it waits for `DOMContentLoaded`; otherwise, it runs immediately.
+- Backticks, backslashes, and `${` in user script code are escaped before embedding.
+- SPA navigation (Instagram, Facebook, etc.) is handled by `injectSpaNavigationBridge(view)`. It monkey-patches `history.pushState` and `history.replaceState` and listens for `popstate`.
+- **Note on SPAs:** Automatic re-running of all scripts on every SPA transition is disabled to prevent side effects from multiple executions. Scripts that need to handle SPA transitions should listen to the `popstate` event or use the bridge's hooks themselves.
 
 ### SwipeRefreshLayout + WebView
 - `SwipeRefreshLayout.setOnChildScrollUpCallback` is set so pull-to-refresh only triggers when the WebView is scrolled to the very top, preventing accidental refreshes mid-page.

@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
     // AdBlock state (refreshed on resume)
     private var isAdBlockEnabled = true
     companion object {
-        private const val PREF_PENDING_CLEAR = "pref_pending_clear"
+        private const val TAG = "MainActivity"
     }
 
     private val adBlockDomains = setOf(
@@ -95,12 +95,10 @@ class MainActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences("browser_prefs", MODE_PRIVATE)
 
-        // If the user had "clear on exit" enabled, clear all data now (at startup)
-        // before the UI loads. We can't reliably clear at process death, so we
-        // arm PREF_PENDING_CLEAR when the setting is on and clear it here on the
-        // next launch.
-        if (prefs.getBoolean(PREF_PENDING_CLEAR, false)) {
-            prefs.edit().putBoolean(PREF_PENDING_CLEAR, false).apply()
+        // If "clear on exit" is enabled, clear all data now (at startup).
+        // This is more reliable than clearing on exit because Android doesn't 
+        // guarantee onStop/onDestroy will run. Every launch starts fresh.
+        if (prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
             performClearDataSync()
         }
 
@@ -130,12 +128,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Arm the pending-clear flag whenever the setting is on and we're finishing.
-        // The actual clearing happens at the NEXT launch in onCreate, because at
-        // process-death time there is no guarantee onStop/onDestroy will complete.
-        if (isFinishing && prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
-            prefs.edit().putBoolean(PREF_PENDING_CLEAR, true).apply()
-        }
+        // No-op: "Clear on exit" is now handled on start for reliability.
     }
 
     override fun onDestroy() {
@@ -496,6 +489,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Inject all active user scripts into [view].
+     * Uses a flag to ensure scripts only run once per document load.
      */
     private fun injectScripts(view: WebView) {
         if (!prefs.getBoolean(SettingsActivity.PREF_SCRIPTS_ENABLED, true)) return
@@ -508,49 +502,53 @@ class MainActivity : AppCompatActivity() {
                 .replace("`", "\\`")
                 .replace("\${", "\\\${")
             "(function(){\n" +
-            "  function __run(){\n" +
-            "    try{\n" +
+            "  try{\n" +
             safe + "\n" +
-            "    }catch(e){ console.error('UserScript Error:',e); }\n" +
-            "  }\n" +
-            "  if(document.readyState==='loading'){\n" +
-            "    document.addEventListener('DOMContentLoaded',__run,{once:true});\n" +
-            "  } else {\n" +
-            "    __run();\n" +
-            "  }\n" +
-            "})()"
+            "  }catch(e){ console.error('UserScript Error:',e); }\n" +
+            "})();"
         }
 
-        val js = "(function(){\n" +
-            "  function __runAll(){\n" +
-            scriptBlocks + "\n" +
-            "  }\n" +
-            "  window.__toolBrowserRunScripts = __runAll;\n" +
-            "  __runAll();\n" +
-            "})()"
+        val js = """
+            (function() {
+              if (window.__toolBrowserScriptsInjected) return;
+              window.__toolBrowserScriptsInjected = true;
+              function __runAll() {
+                $scriptBlocks
+              }
+              window.__toolBrowserRunScripts = __runAll;
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', __runAll, {once:true});
+              } else {
+                __runAll();
+              }
+            })();
+        """.trimIndent()
         view.evaluateJavascript(js, null)
     }
 
     /**
      * Inject a one-time bridge that monkey-patches pushState/replaceState and
-     * listens for popstate so we can re-run user scripts after every SPA
-     * client-side navigation.
+     * listens for popstate. Note: automatic re-running of scripts on SPA navigation
+     * is disabled by default to prevent double-injection, but the bridge remains
+     * for manual use via window.__toolBrowserRunScripts().
      */
     private fun injectSpaNavigationBridge(view: WebView) {
-        val js = "(function(){\n" +
-            "  if(window.__toolBrowserBridgeInstalled) return;\n" +
-            "  window.__toolBrowserBridgeInstalled = true;\n" +
-            "  var _push    = history.pushState.bind(history);\n" +
-            "  var _replace = history.replaceState.bind(history);\n" +
-            "  function notify(){\n" +
-            "    setTimeout(function(){\n" +
-            "      if(typeof window.__toolBrowserRunScripts === 'function') window.__toolBrowserRunScripts();\n" +
-            "    }, 350);\n" +
-            "  }\n" +
-            "  history.pushState    = function(){ _push.apply(history,arguments);    notify(); };\n" +
-            "  history.replaceState = function(){ _replace.apply(history,arguments); notify(); };\n" +
-            "  window.addEventListener('popstate', notify);\n" +
-            "})();"
+        val js = """
+            (function(){
+              if(window.__toolBrowserBridgeInstalled) return;
+              window.__toolBrowserBridgeInstalled = true;
+              var _push    = history.pushState.bind(history);
+              var _replace = history.replaceState.bind(history);
+              function notify(){
+                // Re-run is now manual or handled by individual scripts to avoid 
+                // injecting multiple times on each interaction.
+                console.log('SPA Navigation detected');
+              }
+              history.pushState    = function(){ _push.apply(history,arguments);    notify(); };
+              history.replaceState = function(){ _replace.apply(history,arguments); notify(); };
+              window.addEventListener('popstate', notify);
+            })();
+        """.trimIndent()
         view.evaluateJavascript(js, null)
     }
 
@@ -624,11 +622,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performClearDataSync() {
-        webViews.values.forEach { wv ->
-            wv.clearCache(true)
-            wv.clearHistory()
-            wv.clearFormData()
-            wv.clearSslPreferences()
+        if (webViews.isEmpty()) {
+            // Clear global disk cache via a temporary instance if no tabs are open yet
+            try { WebView(this).clearCache(true) } catch (_: Exception) {}
+        } else {
+            webViews.values.forEach { wv ->
+                wv.clearCache(true)
+                wv.clearHistory()
+                wv.clearFormData()
+                wv.clearSslPreferences()
+            }
         }
         WebStorage.getInstance().deleteAllData()
         val cookieManager = CookieManager.getInstance()
