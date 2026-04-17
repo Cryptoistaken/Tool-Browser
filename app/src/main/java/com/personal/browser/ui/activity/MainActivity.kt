@@ -62,9 +62,9 @@ class MainActivity : AppCompatActivity() {
     // AdBlock state (refreshed on resume)
     private var isAdBlockEnabled = true
     private val adBlockDomains = setOf(
-        \"doubleclick.net\", \"googleadservices.com\", \"googlesyndication.com\",
-        \"adservice.google.com\", \"amazon-adsystem.com\", \"criteo.com\", \"adnxs.com\",
-        \"pagead2.googlesyndication.com\", \"ads.google.com\", \"adtago.s3.amazonaws.com\"
+        "doubleclick.net", "googleadservices.com", "googlesyndication.com",
+        "adservice.google.com", "amazon-adsystem.com", "criteo.com", "adnxs.com",
+        "pagead2.googlesyndication.com", "ads.google.com", "adtago.s3.amazonaws.com"
     )
 
     //  Settings launcher 
@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            if (result.data?.getStringExtra(\"ACTION\") == \"CLEAR_DATA\") {
+            if (result.data?.getStringExtra("ACTION") == "CLEAR_DATA") {
                 clearBrowsingData()
             }
         }
@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        prefs = getSharedPreferences(\"browser_prefs\", MODE_PRIVATE)
+        prefs = getSharedPreferences("browser_prefs", MODE_PRIVATE)
 
         setupCopyCookieButton()
         setupUrlBar()
@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity() {
     //  Theme helper 
 
     private fun applyThemeFromPrefs() {
-        val prefs = getSharedPreferences(\"browser_prefs\", MODE_PRIVATE)
+        val prefs = getSharedPreferences("browser_prefs", MODE_PRIVATE)
         val dark = prefs.getBoolean(SettingsActivity.PREF_DARK_MODE, false)
         AppCompatDelegate.setDefaultNightMode(
             if (dark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
@@ -141,8 +141,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateCopyCookieVisibility() {
-        val url = currentWebView?.url ?: \"\"
-        val onWebPage = url.startsWith(\"http://\") || url.startsWith(\"https://\")
+        val url = currentWebView?.url ?: ""
+        val onWebPage = url.startsWith("http://") || url.startsWith("https://")
         binding.btnCopyCookie.isInvisible = !onWebPage
     }
 
@@ -153,11 +153,11 @@ class MainActivity : AppCompatActivity() {
             val popup = PopupMenu(this, view)
             // Inflate with icons using reflection (works on API 28+, safe fallback otherwise)
             try {
-                val fieldMPopup = PopupMenu::class.java.getDeclaredField(\"mPopup\")
+                val fieldMPopup = PopupMenu::class.java.getDeclaredField("mPopup")
                 fieldMPopup.isAccessible = true
                 val menuPopupHelper = fieldMPopup.get(popup)
                 val setForceIcons = menuPopupHelper.javaClass.getDeclaredMethod(
-                    \"setForceShowIcon\", Boolean::class.java
+                    "setForceShowIcon", Boolean::class.java
                 )
                 setForceIcons.isAccessible = true
                 setForceIcons.invoke(menuPopupHelper, true)
@@ -195,14 +195,14 @@ class MainActivity : AppCompatActivity() {
             R.id.menu_share      -> shareCurrentUrl()
             R.id.menu_copy_url   -> copyCurrentUrl()
             R.id.menu_clear_data -> clearBrowsingData()
-            R.id.menu_settings   -> launchSettings(\"GENERAL\")
+            R.id.menu_settings   -> launchSettings("GENERAL")
         }
         return true
     }
 
     private fun launchSettings(mode: String) {
         settingsLauncher.launch(
-            Intent(this, SettingsActivity::class.java).putExtra(\"SETTINGS_MODE\", mode)
+            Intent(this, SettingsActivity::class.java).putExtra("SETTINGS_MODE", mode)
         )
     }
 
@@ -306,7 +306,7 @@ class MainActivity : AppCompatActivity() {
             orientation = android.widget.LinearLayout.VERTICAL
         }
         val headerBtn = android.widget.Button(this).apply {
-            text = \"+ New Tab\"
+            text = "+ New Tab"
             setOnClickListener { viewModel.openNewTab(getHomepageUrl()); sheet.dismiss() }
         }
         container.addView(headerBtn, android.widget.LinearLayout.LayoutParams(
@@ -384,7 +384,7 @@ class MainActivity : AppCompatActivity() {
                 mediaPlaybackRequiresUserGesture = false
                 databaseEnabled      = true
                 allowFileAccess      = true
-                userAgentString      = settings.userAgentString.replace(\"; wv\", \"\")
+                userAgentString      = settings.userAgentString.replace("; wv", "")
             }
 
             CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
@@ -420,11 +420,11 @@ class MainActivity : AppCompatActivity() {
                     view: WebView, request: WebResourceRequest
                 ): WebResourceResponse? {
                     if (isAdBlockEnabled) {
-                        val host = request.url.host ?: \"\"
+                        val host = request.url.host ?: ""
                         if (adBlockDomains.any { host.contains(it) }) {
                             return WebResourceResponse(
-                                \"text/plain\", \"UTF-8\",
-                                java.io.ByteArrayInputStream(\"\".toByteArray())
+                                "text/plain", "UTF-8",
+                                java.io.ByteArrayInputStream("".toByteArray())
                             )
                         }
                     }
@@ -434,8 +434,8 @@ class MainActivity : AppCompatActivity() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView, request: WebResourceRequest
                 ): Boolean {
-                    val scheme = request.url.scheme ?: \"\"
-                    return if (scheme == \"http\" || scheme == \"https\") false
+                    val scheme = request.url.scheme ?: ""
+                    return if (scheme == "http" || scheme == "https") false
                     else {
                         try { startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
                         catch (_: Exception) {}
@@ -480,12 +480,12 @@ class MainActivity : AppCompatActivity() {
 
     /** Load enabled script codes from SharedPreferences. */
     private fun loadActiveScripts(): List<String> {
-        val json = prefs.getString(SettingsActivity.PREF_SCRIPTS_JSON, \"[]\") ?: \"[]\"
+        val json = prefs.getString(SettingsActivity.PREF_SCRIPTS_JSON, "[]") ?: "[]"
         return try {
             val arr = JSONArray(json)
             (0 until arr.length()).mapNotNull { i ->
                 val obj = arr.getJSONObject(i)
-                if (obj.optBoolean(\"enabled\", true)) obj.optString(\"code\") else null
+                if (obj.optBoolean("enabled", true)) obj.optString("code") else null
             }.filter { it.isNotBlank() }
         } catch (_: Exception) { emptyList() }
     }
@@ -515,7 +515,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUrlDisplay() {
         if (!binding.urlEditText.hasFocus()) {
-            val url = currentWebView?.url ?: viewModel.activeTab?.url ?: \"\"
+            val url = currentWebView?.url ?: viewModel.activeTab?.url ?: ""
             binding.urlEditText.setText(UrlUtils.getDisplayUrl(url))
         }
     }
@@ -544,15 +544,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun toggleDesktopMode() {
         val wv = currentWebView ?: return
-        val isDesktop = wv.settings.userAgentString.contains(\"X11\")
+        val isDesktop = wv.settings.userAgentString.contains("X11")
         wv.settings.userAgentString = if (isDesktop) {
             wv.settings.userAgentString
-                .replace(\"X11; Linux x86_64\", \"Linux; Android 13; Pixel 7\")
-                .replace(\"Chrome/\", \"Mobile Chrome/\")
+                .replace("X11; Linux x86_64", "Linux; Android 13; Pixel 7")
+                .replace("Chrome/", "Mobile Chrome/")
         } else {
-            \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36\"
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         }
-        showSnackbar(if (isDesktop) \"Mobile mode\" else \"Desktop mode\")
+        showSnackbar(if (isDesktop) "Mobile mode" else "Desktop mode")
         wv.reload()
     }
 
@@ -561,7 +561,7 @@ class MainActivity : AppCompatActivity() {
     private fun shareCurrentUrl() {
         val url = viewModel.activeTab?.url ?: return
         startActivity(Intent.createChooser(
-            Intent(Intent.ACTION_SEND).apply { type = \"text/plain\"; putExtra(Intent.EXTRA_TEXT, url) },
+            Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, url) },
             getString(R.string.share_url)
         ))
     }
@@ -569,21 +569,21 @@ class MainActivity : AppCompatActivity() {
     private fun copyCurrentUrl() {
         val url = viewModel.activeTab?.url ?: return
         (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-            .setPrimaryClip(ClipData.newPlainText(\"URL\", url))
+            .setPrimaryClip(ClipData.newPlainText("URL", url))
         showSnackbar(getString(R.string.url_copied))
     }
 
     private fun copyCurrentCookies() {
         val url     = currentWebView?.url ?: viewModel.activeTab?.url ?: return
         val cookies = CookieManager.getInstance().getCookie(url)
-        if (cookies.isNullOrBlank()) { showSnackbar(\"No cookies found for this page\"); return }
+        if (cookies.isNullOrBlank()) { showSnackbar("No cookies found for this page"); return }
         (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-            .setPrimaryClip(ClipData.newPlainText(\"Cookies\", cookies))
+            .setPrimaryClip(ClipData.newPlainText("Cookies", cookies))
         vibrate()
         showSnackbar(getString(R.string.cookies_copied))
     }
 
-    @Suppress(\"DEPRECATION\")
+    @Suppress("DEPRECATION")
     private fun vibrate() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager)

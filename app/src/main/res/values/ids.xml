@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="menu_new_tab" type="id" />
+    <item name="menu_bookmarks" type="id" />
+    <item name="menu_history" type="id" />
+    <item name="menu_desktop" type="id" />
+    <item name="menu_share" type="id" />
+    <item name="menu_copy_url" type="id" />
+    <item name="menu_clear_data" type="id" />
+    <item name="menu_settings" type="id" />
+</resources>
