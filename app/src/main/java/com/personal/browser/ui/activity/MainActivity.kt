@@ -25,6 +25,7 @@ import android.webkit.WebSettings
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebViewDatabase
 import android.widget.PopupMenu
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -115,14 +116,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Clear-on-exit: runs in onStop so it fires reliably even when process
-        // is killed.  We guard with a flag so it only runs once per session.
+        // Clear-on-exit: runs when the activity is finishing (e.g., Back button).
         if (isFinishing && prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
             performClearData(showToast = false)
         }
     }
 
     override fun onDestroy() {
+        // Also try clearing on destroy if finishing, to be thorough.
+        if (isFinishing && prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
+            performClearData(showToast = false)
+        }
         webViews.values.forEach { it.destroy() }
         webViews.clear()
         super.onDestroy()
@@ -406,18 +410,32 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onPageFinished(view: WebView, url: String) {
                     super.onPageFinished(view, url)
+
+                    // Inject scripts on every page finish, regardless of whether it's the current tab
+                    val scriptsOn = prefs.getBoolean(SettingsActivity.PREF_SCRIPTS_ENABLED, true)
+                    if (scriptsOn) {
+                        loadActiveScripts().forEach { code ->
+                            // Wrap script in a self-executing function and try-catch for better reliability
+                            // Using newlines to ensure comments in the script don't break the wrapper
+                            val wrappedCode = """
+                                (function() {
+                                    try {
+                                        $code
+                                    } catch (e) {
+                                        console.error('UserScript Error:', e);
+                                    }
+                                })();
+                            """.trimIndent()
+                            view.evaluateJavascript(wrappedCode, null)
+                        }
+                    }
+
                     if (this@apply === currentWebView) {
                         viewModel.onPageFinished(url, view.title)
                         binding.progressBar.isInvisible = true
                         binding.swipeRefresh.isRefreshing = false
                         updateUrlDisplay()
                         updateNavState()
-                        val scriptsOn = prefs.getBoolean(SettingsActivity.PREF_SCRIPTS_ENABLED, true)
-                        if (scriptsOn) {
-                            loadActiveScripts().forEach { code ->
-                                view.evaluateJavascript(code, null)
-                            }
-                        }
                     }
                 }
 
@@ -532,11 +550,28 @@ class MainActivity : AppCompatActivity() {
     private fun clearBrowsingData() = performClearData(showToast = true)
 
     private fun performClearData(showToast: Boolean) {
-        webViews.values.forEach { wv -> wv.clearCache(true); wv.clearHistory() }
+        // Clear data for all active WebViews
+        webViews.values.forEach { wv ->
+            wv.clearCache(true)
+            wv.clearHistory()
+            wv.clearFormData()
+            wv.clearSslPreferences()
+        }
+
+        // Clear global WebView data
         WebStorage.getInstance().deleteAllData()
-        CookieManager.getInstance().removeAllCookies(null)
-        CookieManager.getInstance().flush()
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies {
+            cookieManager.flush()
+        }
+
+        val webViewDb = WebViewDatabase.getInstance(this)
+        webViewDb.clearFormData()
+        webViewDb.clearHttpAuthUsernamePassword()
+
+        // Clear app history from database
         viewModel.clearHistory()
+
         if (showToast) showSnackbar(getString(R.string.data_cleared))
         updateNavState()
     }
@@ -621,7 +656,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupSwipeRefresh() {
         binding.swipeRefresh.setOnChildScrollUpCallback { _, _ ->
-            (currentWebView?.scrollY ?: 0) > 0
+            // Use canScrollVertically(-1) for better accuracy on WebView
+            // Returns true if the child view can be scrolled up, which disables swipe-to-refresh
+            currentWebView?.canScrollVertically(-1) ?: false
         }
         binding.swipeRefresh.setOnRefreshListener {
             currentWebView?.reload()
