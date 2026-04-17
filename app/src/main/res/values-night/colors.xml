@@ -7,4 +7,5 @@
     <color name="on_surface_variant">@color/on_surface_variant_night</color>
     <color name="outline">@color/outline_night</color>
     <color name="url_bar_bg">@color/url_bar_bg_night</color>
+    <color name="primary">@color/primary_night</color>
 </resources>

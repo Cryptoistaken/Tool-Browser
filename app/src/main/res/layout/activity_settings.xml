@@ -14,43 +14,48 @@
         android:layout_height="56dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="16dp"
-        android:background="@color/surface">
+        android:paddingHorizontal="8dp"
+        android:background="@color/surface"
+        android:elevation="4dp">
 
-        <ImageView
+        <ImageButton
             android:id="@+id/btnBackSettings"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_arrow_back"
-            android:contentDescription="Back"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:padding="8dp"
+            android:contentDescription="Back" />
 
         <TextView
             android:id="@+id/tvSettingsTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="8dp"
             android:text="Settings"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="@color/on_surface" />
 
-        <ImageView
+        <!-- + icon for scripts tab -->
+        <ImageButton
             android:id="@+id/btnSettingsAdd"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_add"
+            android:padding="8dp"
             android:visibility="gone"
-            android:contentDescription="Add"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:contentDescription="@string/add_script" />
+
     </LinearLayout>
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/outline"
-        android:alpha="0.2" />
+        android:alpha="0.3" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -61,7 +66,9 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- GENERAL SETTINGS CONTAINER -->
+            <!-- ══════════════════════════════════════════════════════ -->
+            <!-- GENERAL SETTINGS CONTAINER                            -->
+            <!-- ══════════════════════════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/generalContainer"
                 android:layout_width="match_parent"
@@ -69,46 +76,61 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Section: Browser -->
+                <!-- ── Section: Browser ───────────────────────── -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="16dp"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="8dp"
-                    android:text="Browser"
-                    android:textSize="12sp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="6dp"
+                    android:text="BROWSER"
+                    android:textSize="11sp"
                     android:textAllCaps="true"
-                    android:textColor="@color/primary"
-                    android:letterSpacing="0.1" />
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/on_surface_variant" />
 
-                <!-- Homepage URL -->
+                <!-- Homepage URL with dropdown -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp"
-                    android:background="?attr/selectableItemBackground">
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="12dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Default homepage URL"
-                        android:textSize="16sp"
+                        android:text="Default Homepage"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
                         android:textColor="@color/on_surface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:layout_marginBottom="8dp"
-                        android:text="Page loaded when opening a new tab"
+                        android:layout_marginBottom="10dp"
+                        android:text="Select or type the URL loaded on new tab"
                         android:textSize="13sp"
                         android:textColor="@color/on_surface_variant" />
 
+                    <!-- Spinner / dropdown for preset URLs -->
+                    <Spinner
+                        android:id="@+id/spinnerHomepage"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_spinner"
+                        android:paddingHorizontal="12dp"
+                        android:textColor="@color/on_surface" />
+
+                    <!-- Custom URL input (shown when "Custom…" is selected) -->
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilCustomHomepage"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
                         app:boxCornerRadiusTopStart="8dp"
                         app:boxCornerRadiusTopEnd="8dp"
@@ -132,70 +154,135 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
+                    android:marginHorizontal="16dp"
                     android:background="@color/outline"
-                    android:alpha="0.15" />
+                    android:alpha="0.4" />
 
-                <!-- Section: Privacy -->
+                <!-- ── Section: Appearance ─────────────────────── -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="16dp"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="8dp"
-                    android:text="Privacy"
-                    android:textSize="12sp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="6dp"
+                    android:text="APPEARANCE"
+                    android:textSize="11sp"
                     android:textAllCaps="true"
-                    android:textColor="@color/primary"
-                    android:letterSpacing="0.1" />
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/on_surface_variant" />
 
-                <!-- Clear data on exit -->
+                <!-- Dark / Light theme toggle -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
                     android:background="?attr/selectableItemBackground">
-                    <TextView
-                        android:id="@+id/tvClearOnExitTitle"
+
+                    <LinearLayout
+                        android:id="@+id/themeTextBlock"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Clear browser data on exit"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface"
-                        android:layout_toStartOf="@+id/switchClearOnExit"
+                        android:orientation="vertical"
+                        android:layout_toStartOf="@+id/switchDarkMode"
                         android:layout_alignParentStart="true"
                         android:layout_centerVertical="true"
-                        android:paddingEnd="16dp" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/tvClearOnExitTitle"
-                        android:layout_marginTop="4dp"
-                        android:text="Clears cache, cookies and history when the app is closed"
-                        android:textSize="13sp"
-                        android:textColor="@color/on_surface_variant"
-                        android:layout_toStartOf="@+id/switchClearOnExit"
-                        android:layout_alignParentStart="true"
-                        android:paddingEnd="16dp" />
+                        android:paddingEnd="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Dark Mode"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/on_surface" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Switch between light and dark theme"
+                            android:textSize="13sp"
+                            android:textColor="@color/on_surface_variant" />
+                    </LinearLayout>
+
                     <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchClearOnExit"
+                        android:id="@+id/switchDarkMode"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:checked="false" />
+                        android:layout_centerVertical="true" />
                 </RelativeLayout>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginHorizontal="16dp"
                     android:background="@color/outline"
-                    android:alpha="0.15" />
+                    android:alpha="0.4" />
 
-                <!-- Clear data now button -->
+                <!-- ── Section: Privacy ───────────────────────── -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="6dp"
+                    android:text="PRIVACY"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/on_surface_variant" />
+
+                <!-- Clear data on exit toggle -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:id="@+id/clearExitTextBlock"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_toStartOf="@+id/switchClearOnExit"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:paddingEnd="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Clear data on exit"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/on_surface" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Clears cache, cookies and history when app is closed"
+                            android:textSize="13sp"
+                            android:textColor="@color/on_surface_variant" />
+                    </LinearLayout>
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchClearOnExit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true" />
+                </RelativeLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="@color/outline"
+                    android:alpha="0.4" />
+
+                <!-- Clear data now row -->
                 <LinearLayout
                     android:id="@+id/btnClearDataNow"
                     android:layout_width="match_parent"
@@ -218,24 +305,38 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Clear browsing data now"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:textColor="@color/on_surface" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        android:tint="@color/on_surface_variant"
+                        android:contentDescription="" />
                 </LinearLayout>
 
-                <!-- Section: Content -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="@color/outline"
+                    android:alpha="0.4" />
+
+                <!-- ── Section: Content ───────────────────────── -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="16dp"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="8dp"
-                    android:text="Content"
-                    android:textSize="12sp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="6dp"
+                    android:text="CONTENT"
+                    android:textSize="11sp"
                     android:textAllCaps="true"
-                    android:textColor="@color/primary"
-                    android:letterSpacing="0.1" />
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/on_surface_variant" />
 
-                <!-- Ad Blocking shortcut -->
+                <!-- Ad Blocking row -->
                 <LinearLayout
                     android:id="@+id/btnGoAdBlocking"
                     android:layout_width="match_parent"
@@ -262,8 +363,9 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Ad blocking"
-                            android:textSize="16sp"
+                            android:text="Ad Blocking"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
                             android:textColor="@color/on_surface" />
 
                         <TextView
@@ -280,10 +382,17 @@
                         android:layout_height="16dp"
                         android:src="@drawable/ic_arrow_forward"
                         android:tint="@color/on_surface_variant"
-                        android:contentDescription="Open" />
+                        android:contentDescription="" />
                 </LinearLayout>
 
-                <!-- User Scripts shortcut -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="@color/outline"
+                    android:alpha="0.4" />
+
+                <!-- User Scripts row -->
                 <LinearLayout
                     android:id="@+id/btnGoUserScripts"
                     android:layout_width="match_parent"
@@ -296,7 +405,7 @@
                     <ImageView
                         android:layout_width="22dp"
                         android:layout_height="22dp"
-                        android:src="@drawable/ic_copy"
+                        android:src="@drawable/ic_script"
                         android:layout_marginEnd="16dp"
                         android:tint="@color/on_surface_variant"
                         android:contentDescription="User Scripts" />
@@ -310,15 +419,16 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="User scripts"
-                            android:textSize="16sp"
+                            android:text="User Scripts"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
                             android:textColor="@color/on_surface" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Manage and run custom scripts"
+                            android:text="Manage and run custom scripts on pages"
                             android:textSize="13sp"
                             android:textColor="@color/on_surface_variant" />
                     </LinearLayout>
@@ -328,12 +438,18 @@
                         android:layout_height="16dp"
                         android:src="@drawable/ic_arrow_forward"
                         android:tint="@color/on_surface_variant"
-                        android:contentDescription="Open" />
+                        android:contentDescription="" />
                 </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="24dp" />
 
             </LinearLayout>
 
-            <!-- AD BLOCKING CONTAINER -->
+            <!-- ══════════════════════════════════════════════════════ -->
+            <!-- AD BLOCKING CONTAINER                                 -->
+            <!-- ══════════════════════════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/adBlockingContainer"
                 android:layout_width="match_parent"
@@ -341,7 +457,19 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Item 1 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="6dp"
+                    android:text="FILTERS"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/on_surface_variant" />
+
+                <!-- Ad blocking main switch -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -352,16 +480,24 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Ad blocking"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface" />
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/on_surface"
+                        android:layout_toStartOf="@+id/switchAdBlocking"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:paddingEnd="16dp" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_below="@id/tvAdBlockTitle1"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="3dp"
                         android:text="Block ads and trackers while browsing"
-                        android:textSize="14sp"
-                        android:textColor="@color/on_surface_variant" />
+                        android:textSize="13sp"
+                        android:textColor="@color/on_surface_variant"
+                        android:layout_toStartOf="@+id/switchAdBlocking"
+                        android:layout_alignParentStart="true"
+                        android:paddingEnd="16dp" />
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switchAdBlocking"
                         android:layout_width="wrap_content"
@@ -371,7 +507,10 @@
                         android:checked="true" />
                 </RelativeLayout>
 
-                <!-- Item 2 -->
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp" android:background="@color/outline" android:alpha="0.3" />
+
+                <!-- Built-in filters switch -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -382,16 +521,24 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Enable built-in filters"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface" />
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/on_surface"
+                        android:layout_toStartOf="@+id/switchFilters"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:paddingEnd="16dp" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_below="@id/tvAdBlockTitle2"
-                        android:layout_marginTop="4dp"
-                        android:text="Built-in filters only block common ads"
-                        android:textSize="14sp"
-                        android:textColor="@color/on_surface_variant" />
+                        android:layout_marginTop="3dp"
+                        android:text="Block common ads using built-in filter lists"
+                        android:textSize="13sp"
+                        android:textColor="@color/on_surface_variant"
+                        android:layout_toStartOf="@+id/switchFilters"
+                        android:layout_alignParentStart="true"
+                        android:paddingEnd="16dp" />
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switchFilters"
                         android:layout_width="wrap_content"
@@ -401,53 +548,10 @@
                         android:checked="true" />
                 </RelativeLayout>
 
-                <!-- Item 3 -->
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:background="?attr/selectableItemBackground">
-                    <TextView
-                        android:id="@+id/tvAdBlockTitle3"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Custom filters"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/tvAdBlockTitle3"
-                        android:layout_marginTop="4dp"
-                        android:text="Including custom filters and marked ads"
-                        android:textSize="14sp"
-                        android:textColor="@color/on_surface_variant" />
-                </RelativeLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp" android:background="@color/outline" android:alpha="0.3" />
 
-                <!-- Item 4 -->
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:background="?attr/selectableItemBackground">
-                    <TextView
-                        android:id="@+id/tvAdBlockTitle4"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Filter subscriptions"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/tvAdBlockTitle4"
-                        android:layout_marginTop="4dp"
-                        android:text="Subscribe to Adblock Plus filter lists"
-                        android:textSize="14sp"
-                        android:textColor="@color/on_surface_variant" />
-                </RelativeLayout>
-
-                <!-- Item 5 -->
+                <!-- Expand content switch -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -457,17 +561,25 @@
                         android:id="@+id/tvAdBlockTitle5"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Expand webpage content automatically"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface" />
+                        android:text="Expand webpage content"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/on_surface"
+                        android:layout_toStartOf="@+id/switchExpand"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:paddingEnd="16dp" />
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_below="@id/tvAdBlockTitle5"
-                        android:layout_marginTop="4dp"
-                        android:text="Expand collapsed content automatically when open a webpage"
-                        android:textSize="14sp"
-                        android:textColor="@color/on_surface_variant" />
+                        android:layout_marginTop="3dp"
+                        android:text="Expand collapsed content automatically on load"
+                        android:textSize="13sp"
+                        android:textColor="@color/on_surface_variant"
+                        android:layout_toStartOf="@+id/switchExpand"
+                        android:layout_alignParentStart="true"
+                        android:paddingEnd="16dp" />
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switchExpand"
                         android:layout_width="wrap_content"
@@ -476,9 +588,12 @@
                         android:layout_centerVertical="true"
                         android:checked="true" />
                 </RelativeLayout>
+
             </LinearLayout>
 
-            <!-- SCRIPTS CONTAINER -->
+            <!-- ══════════════════════════════════════════════════════ -->
+            <!-- SCRIPTS CONTAINER                                     -->
+            <!-- ══════════════════════════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/scriptsContainer"
                 android:layout_width="match_parent"
@@ -486,20 +601,38 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Item 1 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="6dp"
+                    android:text="SETTINGS"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/on_surface_variant" />
+
+                <!-- Master enable switch -->
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
                     android:background="?attr/selectableItemBackground">
+
                     <TextView
                         android:id="@+id/tvScriptsTitle1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Enable scripts"
+                        android:text="Enable user scripts"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/on_surface"
                         android:layout_centerVertical="true"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface" />
+                        android:layout_toStartOf="@+id/switchEnableScripts"
+                        android:layout_alignParentStart="true"
+                        android:paddingEnd="16dp" />
+
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switchEnableScripts"
                         android:layout_width="wrap_content"
@@ -509,68 +642,41 @@
                         android:checked="true" />
                 </RelativeLayout>
 
-                <!-- Item 2 -->
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:background="?attr/selectableItemBackground">
-                    <TextView
-                        android:id="@+id/tvScriptsTitle2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Update interval"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/tvScriptsTitle2"
-                        android:layout_marginTop="4dp"
-                        android:text="Never"
-                        android:textSize="14sp"
-                        android:textColor="@color/on_surface_variant" />
-                </RelativeLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp" android:background="@color/outline" android:alpha="0.3" />
 
+                <!-- Scripts section label -->
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="Scripts"
-                    android:textSize="14sp"
-                    android:textColor="@color/primary" />
-
-                <!-- Item 3 -->
-                <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:background="?attr/selectableItemBackground">
-                    <TextView
-                        android:id="@+id/tvScriptsTitle3"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Immersive Translate - Translate Web &amp; PDF"
-                        android:textSize="16sp"
-                        android:textColor="@color/on_surface" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/tvScriptsTitle3"
-                        android:layout_marginTop="4dp"
-                        android:text="1.12.4"
-                        android:textSize="14sp"
-                        android:textColor="@color/on_surface_variant" />
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchScriptImmersive"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:checked="true" />
-                </RelativeLayout>
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="6dp"
+                    android:text="INSTALLED SCRIPTS"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.12"
+                    android:textColor="@color/on_surface_variant" />
+
+                <!-- Empty state message -->
+                <TextView
+                    android:id="@+id/tvNoScripts"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="24dp"
+                    android:gravity="center"
+                    android:text="@string/no_scripts"
+                    android:textSize="14sp"
+                    android:textColor="@color/on_surface_variant"
+                    android:visibility="visible" />
+
+                <!-- Dynamic list of user scripts goes here -->
+                <LinearLayout
+                    android:id="@+id/scriptsListContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
             </LinearLayout>
 
         </LinearLayout>

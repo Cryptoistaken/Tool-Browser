@@ -1,30 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Cursor Brand Colors -->
-    <color name="primary">#F54E00</color> <!-- Accent Orange -->
-    <color name="primary_variant">#C23D00</color>
+    <!-- Cal.com Design System — Light Mode -->
+    <color name="primary">#242424</color>
+    <color name="primary_variant">#111111</color>
     <color name="on_primary">#FFFFFF</color>
 
-    <!-- Cursor Surface Colors (Light) -->
-    <color name="background">#F2F1ED</color> <!-- Cursor Cream -->
-    <color name="surface">#E6E5E0</color> <!-- Cursor Light -->
-    <color name="surface_variant">#EBEAE5</color> <!-- Surface 300 -->
-    <color name="on_surface">#26251E</color> <!-- Cursor Dark -->
-    <color name="on_surface_variant">#8C8B82</color> <!-- 55% warm brown approx -->
-    <color name="outline">#E3E2DF</color> <!-- approx oklab 10% -->
+    <color name="background">#FFFFFF</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F5F5F5</color>
+    <color name="on_surface">#242424</color>
+    <color name="on_surface_variant">#898989</color>
+    <color name="outline">#E0E0E0</color>
+    <color name="url_bar_bg">#FFFFFF</color>
+    <color name="link_blue">#0099FF</color>
+    <color name="error_color">#CC0000</color>
+    <color name="accent_orange">#f54e00</color>
 
-    <!-- URL Bar -->
-    <color name="url_bar_bg">#F7F7F4</color> <!-- Surface 100 -->
-
-    <!-- Semantic / Feedback -->
-    <color name="on_error">#CF2D56</color> <!-- Warm error red -->
-    
-    <!-- Fallbacks (If Night mode surfaces reference these directly) -->
-    <color name="background_night">#1A1914</color>
-    <color name="surface_night">#26251E</color>
-    <color name="surface_variant_night">#38372C</color>
-    <color name="on_surface_night">#F2F1ED</color>
-    <color name="on_surface_variant_night">#B5B4A8</color>
-    <color name="outline_night">#3D3C33</color>
-    <color name="url_bar_bg_night">#2F2E23</color>
+    <!-- Night palette (referenced by values-night/colors.xml) -->
+    <color name="background_night">#111111</color>
+    <color name="surface_night">#1A1A1A</color>
+    <color name="surface_variant_night">#242424</color>
+    <color name="on_surface_night">#FFFFFF</color>
+    <color name="on_surface_variant_night">#898989</color>
+    <color name="outline_night">#333333</color>
+    <color name="url_bar_bg_night">#1A1A1A</color>
+    <color name="primary_night">#FFFFFF</color>
 </resources>

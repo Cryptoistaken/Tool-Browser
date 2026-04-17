@@ -1,5 +1,6 @@
 package com.personal.browser.data.model
 
+import android.graphics.Bitmap
 import java.util.UUID
 
 data class Tab(
@@ -7,6 +8,7 @@ data class Tab(
     var title: String = "New Tab",
     var url: String = "",
     var faviconUrl: String? = null,
+    var favicon: Bitmap? = null,
     var isLoading: Boolean = false,
     var progress: Int = 0,
     var canGoBack: Boolean = false,

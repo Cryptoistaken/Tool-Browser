@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="12dp"
     android:layout_marginVertical="4dp"
-    app:cardCornerRadius="16dp"
+    app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
     app:strokeWidth="1dp"
     app:strokeColor="@color/outline"
@@ -19,6 +19,16 @@
         android:gravity="center_vertical"
         android:paddingHorizontal="12dp"
         android:paddingVertical="10dp">
+
+        <!-- Favicon -->
+        <ImageView
+            android:id="@+id/tabFavicon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginEnd="10dp"
+            android:src="@drawable/ic_globe"
+            android:scaleType="fitCenter"
+            android:contentDescription="Favicon" />
 
         <LinearLayout
             android:layout_width="0dp"

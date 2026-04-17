@@ -11,28 +11,30 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Top URL Bar -->
+        <!-- ── Top URL Bar ────────────────────────────────────────── -->
         <LinearLayout
             android:id="@+id/urlBar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp"
+            android:paddingHorizontal="6dp"
             android:paddingVertical="6dp"
             android:background="@color/surface"
             android:gravity="center_vertical"
             android:elevation="4dp">
 
+            <!-- Cookie button: cookie icon, top-left -->
             <ImageButton
                 android:id="@+id/btnCopyCookie"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_copy"
+                android:src="@drawable/ic_cookie"
                 android:contentDescription="@string/copy_cookie"
                 android:padding="8dp"
                 android:visibility="invisible" />
 
+            <!-- URL bar pill -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="0dp"
                 android:layout_height="40dp"
@@ -64,6 +66,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Three-dot overflow menu -->
             <ImageButton
                 android:id="@+id/btnMenu"
                 android:layout_width="40dp"
@@ -75,7 +78,7 @@
 
         </LinearLayout>
 
-        <!-- Progress Bar -->
+        <!-- ── Progress Bar ──────────────────────────────────────── -->
         <ProgressBar
             android:id="@+id/progressBar"
             style="@style/Widget.AppCompat.ProgressBar.Horizontal"
@@ -85,7 +88,7 @@
             android:progressTint="@color/primary"
             android:visibility="invisible" />
 
-        <!-- WebView Container -->
+        <!-- ── WebView area ───────────────────────────────────────── -->
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
             android:id="@+id/swipeRefresh"
             android:layout_width="match_parent"
@@ -99,7 +102,7 @@
 
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-        <!-- Bottom Navigation Bar -->
+        <!-- ── Bottom Navigation Bar ────────────────────────────── -->
         <LinearLayout
             android:id="@+id/bottomNavBar"
             android:layout_width="match_parent"
@@ -151,6 +154,7 @@
                 android:contentDescription="@string/bookmark"
                 android:padding="12dp" />
 
+            <!-- Tabs button with count badge -->
             <FrameLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"

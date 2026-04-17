@@ -11,10 +11,10 @@
     <string name="menu">Menu</string>
     <string name="bookmarks">Bookmarks</string>
     <string name="history">History</string>
-    <string name="desktop_site">Desktop site</string>
+    <string name="desktop_site">Desktop Site</string>
     <string name="share">Share</string>
     <string name="copy_url">Copy URL</string>
-    <string name="clear_data">Clear browsing data</string>
+    <string name="clear_data">Clear Data</string>
     <string name="close_tab">Close tab</string>
     <string name="data_cleared">Browsing data cleared</string>
     <string name="url_copied">URL copied</string>
@@ -29,4 +29,14 @@
     <string name="clear_on_exit">Clear browser data on exit</string>
     <string name="homepage_url">Default homepage URL</string>
     <string name="general_settings">General Settings</string>
+    <string name="theme_toggle">Toggle Theme</string>
+    <string name="script_from_url">From URL</string>
+    <string name="script_from_file">From File</string>
+    <string name="script_from_text">Enter Script</string>
+    <string name="add_script">Add Script</string>
+    <string name="delete_script">Delete script</string>
+    <string name="no_scripts">No user scripts added yet.</string>
+    <string name="script_added">Script added</string>
+    <string name="script_deleted">Script deleted</string>
+    <string name="invalid_url">Invalid URL</string>
 </resources>

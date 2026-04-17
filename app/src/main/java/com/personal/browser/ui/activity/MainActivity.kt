@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.os.Build
@@ -12,6 +13,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.KeyEvent
+import android.view.MenuItem
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -23,10 +25,12 @@ import android.webkit.WebSettings
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.PopupMenu
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
@@ -43,6 +47,7 @@ import com.personal.browser.ui.adapter.TabsAdapter
 import com.personal.browser.ui.viewmodel.BrowserViewModel
 import com.personal.browser.utils.UrlUtils
 import dagger.hilt.android.AndroidEntryPoint
+import org.json.JSONArray
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -54,33 +59,37 @@ class MainActivity : AppCompatActivity() {
     private val webViews = mutableMapOf<String, WebView>()
     private var currentWebView: WebView? = null
 
+    // AdBlock state (refreshed on resume)
     private var isAdBlockEnabled = true
     private val adBlockDomains = setOf(
-        "doubleclick.net", "googleadservices.com", "googlesyndication.com",
-        "adservice.google.com", "amazon-adsystem.com", "criteo.com", "adnxs.com",
-        "pagead2.googlesyndication.com", "ads.google.com", "adtago.s3.amazonaws.com"
+        \"doubleclick.net\", \"googleadservices.com\", \"googlesyndication.com\",
+        \"adservice.google.com\", \"amazon-adsystem.com\", \"criteo.com\", \"adnxs.com\",
+        \"pagead2.googlesyndication.com\", \"ads.google.com\", \"adtago.s3.amazonaws.com\"
     )
 
-    private val activeUserScripts = listOf(
-        "javascript:(function() { console.log('User Scripts System Ready.'); })();"
-    )
+    // ── Settings launcher ─────────────────────────────────────────────────────
 
     private val settingsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            if (result.data?.getStringExtra("ACTION") == "CLEAR_DATA") {
+            if (result.data?.getStringExtra(\"ACTION\") == \"CLEAR_DATA\") {
                 clearBrowsingData()
             }
         }
+        // Re-apply dark mode pref in case it changed while settings was open
+        applyThemeFromPrefs()
     }
 
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        applyThemeFromPrefs()          // apply before setContentView
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        prefs = getSharedPreferences("browser_prefs", MODE_PRIVATE)
+        prefs = getSharedPreferences(\"browser_prefs\", MODE_PRIVATE)
 
         setupCopyCookieButton()
         setupUrlBar()
@@ -106,6 +115,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        // Clear-on-exit: runs synchronously in onDestroy so it always fires.
         if (prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
             performClearData(showToast = false)
         }
@@ -114,83 +124,106 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    // ── Theme helper ──────────────────────────────────────────────────────────
 
-    // ── Copy Cookie Button (top-left) ─────────────────────────────────────────
-
-    private fun setupCopyCookieButton() {
-        binding.btnCopyCookie.setOnClickListener {
-            copyCurrentCookies()
-        }
+    private fun applyThemeFromPrefs() {
+        val prefs = getSharedPreferences(\"browser_prefs\", MODE_PRIVATE)
+        val dark = prefs.getBoolean(SettingsActivity.PREF_DARK_MODE, false)
+        AppCompatDelegate.setDefaultNightMode(
+            if (dark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+        )
     }
 
-    /** Show/hide the copy-cookie button based on whether a real http(s) page is loaded. */
+    // ── Cookie button ─────────────────────────────────────────────────────────
+
+    private fun setupCopyCookieButton() {
+        binding.btnCopyCookie.setOnClickListener { copyCurrentCookies() }
+    }
+
     private fun updateCopyCookieVisibility() {
-        val url = currentWebView?.url ?: ""
-        val onWebPage = url.startsWith("http://") || url.startsWith("https://")
+        val url = currentWebView?.url ?: \"\"
+        val onWebPage = url.startsWith(\"http://\") || url.startsWith(\"https://\")
         binding.btnCopyCookie.isInvisible = !onWebPage
     }
 
-    // ── Menu button (top-right) ───────────────────────────────────────────────
+    // ── Menu button (top-right ···) ───────────────────────────────────────────
 
     private fun setupMenuButton() {
         binding.btnMenu.setOnClickListener { view ->
-            val popup = android.widget.PopupMenu(this, view)
-            popup.menu.add("New Tab")
-            popup.menu.add("Bookmarks")
-            popup.menu.add("History")
-            popup.menu.add("Desktop Site")
-            popup.menu.add("Share")
-            popup.menu.add("Copy URL")
-            popup.menu.add("Clear Data")
-            popup.menu.add("Settings")
-            popup.setOnMenuItemClickListener { item ->
-                when (item.title.toString()) {
-                    "New Tab"      -> viewModel.openNewTab(getHomepageUrl())
-                    "Bookmarks"    -> showBookmarksSheet()
-                    "History"      -> showHistorySheet()
-                    "Desktop Site" -> toggleDesktopMode()
-                    "Share"        -> shareCurrentUrl()
-                    "Copy URL"     -> copyCurrentUrl()
-                    "Clear Data"   -> clearBrowsingData()
-                    "Settings"     -> launchSettings("GENERAL")
-                }
-                true
-            }
+            val popup = PopupMenu(this, view)
+            // Inflate with icons using reflection (works on API 28+, safe fallback otherwise)
+            try {
+                val fieldMPopup = PopupMenu::class.java.getDeclaredField(\"mPopup\")
+                fieldMPopup.isAccessible = true
+                val menuPopupHelper = fieldMPopup.get(popup)
+                val setForceIcons = menuPopupHelper.javaClass.getDeclaredMethod(
+                    \"setForceShowIcon\", Boolean::class.java
+                )
+                setForceIcons.isAccessible = true
+                setForceIcons.invoke(menuPopupHelper, true)
+            } catch (_: Exception) { /* non-critical */ }
+
+            val menu = popup.menu
+            menu.add(0, R.id.menu_new_tab,     0, getString(R.string.new_tab))
+                .setIcon(R.drawable.ic_new_tab)
+            menu.add(0, R.id.menu_bookmarks,   1, getString(R.string.bookmarks))
+                .setIcon(R.drawable.ic_bookmark)
+            menu.add(0, R.id.menu_history,     2, getString(R.string.history))
+                .setIcon(R.drawable.ic_history)
+            menu.add(0, R.id.menu_desktop,     3, getString(R.string.desktop_site))
+                .setIcon(R.drawable.ic_desktop)
+            menu.add(0, R.id.menu_share,       4, getString(R.string.share))
+                .setIcon(R.drawable.ic_share)
+            menu.add(0, R.id.menu_copy_url,    5, getString(R.string.copy_url))
+                .setIcon(R.drawable.ic_copy)
+            menu.add(0, R.id.menu_clear_data,  6, getString(R.string.clear_data))
+                .setIcon(R.drawable.ic_delete)
+            menu.add(0, R.id.menu_settings,    7, getString(R.string.settings))
+                .setIcon(R.drawable.ic_more_vert)
+
+            popup.setOnMenuItemClickListener { item -> onMenuItemSelected(item) }
             popup.show()
         }
     }
 
-    private fun launchSettings(mode: String) {
-        val intent = android.content.Intent(this, SettingsActivity::class.java)
-            .putExtra("SETTINGS_MODE", mode)
-        settingsLauncher.launch(intent)
+    private fun onMenuItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.menu_new_tab    -> viewModel.openNewTab(getHomepageUrl())
+            R.id.menu_bookmarks  -> showBookmarksSheet()
+            R.id.menu_history    -> showHistorySheet()
+            R.id.menu_desktop    -> toggleDesktopMode()
+            R.id.menu_share      -> shareCurrentUrl()
+            R.id.menu_copy_url   -> copyCurrentUrl()
+            R.id.menu_clear_data -> clearBrowsingData()
+            R.id.menu_settings   -> launchSettings(\"GENERAL\")
+        }
+        return true
     }
 
+    private fun launchSettings(mode: String) {
+        settingsLauncher.launch(
+            Intent(this, SettingsActivity::class.java).putExtra(\"SETTINGS_MODE\", mode)
+        )
+    }
 
     // ── URL bar ───────────────────────────────────────────────────────────────
 
     private fun setupUrlBar() {
-        binding.urlEditText.setOnEditorActionListener { textView, actionId, event ->
+        binding.urlEditText.setOnEditorActionListener { tv, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_GO ||
                 (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
             ) {
-                val url = UrlUtils.processInput(textView.text.toString())
-                loadUrl(url)
+                loadUrl(UrlUtils.processInput(tv.text.toString()))
                 hideKeyboard()
                 true
             } else false
         }
-
         binding.urlEditText.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                binding.urlEditText.selectAll()
-            } else {
-                updateUrlDisplay()
-            }
+            if (hasFocus) binding.urlEditText.selectAll() else updateUrlDisplay()
         }
     }
 
-    // ── Bottom navigation buttons ─────────────────────────────────────────────
+    // ── Bottom nav buttons ────────────────────────────────────────────────────
 
     private fun setupNavButtons() {
         binding.btnBack.setOnClickListener    { currentWebView?.goBack() }
@@ -221,32 +254,24 @@ class MainActivity : AppCompatActivity() {
             updateUrlDisplay()
             updateNavState()
         }
-
         viewModel.tabs.observe(this) { tabs ->
             binding.tvTabCount.text = tabs.size.toString()
         }
-
         viewModel.isBookmarked.observe(this) { bookmarked ->
             binding.btnBookmark.alpha = if (bookmarked) 1f else 0.5f
         }
     }
 
-
     // ── Tab management ────────────────────────────────────────────────────────
 
     private fun switchToTab(tabId: String, url: String) {
         currentWebView?.let { binding.webViewContainer.removeView(it) }
-
         val webView = webViews.getOrPut(tabId) {
-            createWebView().also { wv ->
-                if (url.isNotEmpty()) wv.loadUrl(url)
-            }
+            createWebView().also { wv -> if (url.isNotEmpty()) wv.loadUrl(url) }
         }
-
         currentWebView = webView
         binding.webViewContainer.addView(
-            webView,
-            0,
+            webView, 0,
             ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         )
         updateNavState()
@@ -259,29 +284,30 @@ class MainActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@MainActivity)
             setPadding(0, 16, 0, 16)
         }
-        val adapter = TabsAdapter(
-            onTabClick = { index ->
-                viewModel.switchTab(index)
-                sheet.dismiss()
-            },
+
+        // Track tabsAdapter reference so we can update favicons
+        val tabsAdapter = TabsAdapter(
+            onTabClick = { index -> viewModel.switchTab(index); sheet.dismiss() },
             onTabClose = { index ->
                 viewModel.closeTab(index)
-                val remaining = viewModel.tabs.value?.size ?: 0
-                if (remaining == 0) sheet.dismiss()
+                if ((viewModel.tabs.value?.size ?: 0) == 0) sheet.dismiss()
             }
         )
-        rv.adapter = adapter
-        adapter.submitList(viewModel.tabs.value?.toList() ?: emptyList())
+        rv.adapter = tabsAdapter
+        tabsAdapter.submitList(viewModel.tabs.value?.toList() ?: emptyList())
+
+        // Push current favicon cache into adapter
+        webViews.forEach { (tabId, wv) ->
+            val bmp = wv.favicon
+            if (bmp != null) tabsAdapter.updateFavicon(tabId, bmp)
+        }
 
         val container = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
         }
         val headerBtn = android.widget.Button(this).apply {
-            text = "+ New Tab"
-            setOnClickListener {
-                viewModel.openNewTab(getHomepageUrl())
-                sheet.dismiss()
-            }
+            text = \"+ New Tab\"
+            setOnClickListener { viewModel.openNewTab(getHomepageUrl()); sheet.dismiss() }
         }
         container.addView(headerBtn, android.widget.LinearLayout.LayoutParams(
             android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
@@ -292,57 +318,45 @@ class MainActivity : AppCompatActivity() {
         sheet.show()
     }
 
-
     // ── Bookmarks / History sheets ────────────────────────────────────────────
-    // Uses a scoped LifecycleOwner so LiveData observers are cleaned up on dismiss.
 
     private fun showBookmarksSheet() {
-        val sheet = BottomSheetDialog(this)
-        val sheetOwner = SheetLifecycleOwner()
-        val rv = RecyclerView(this).apply {
-            layoutManager = LinearLayoutManager(this@MainActivity)
-            setPadding(0, 16, 0, 32)
-        }
-        val adapter = BookmarkHistoryAdapter(
+        val sheet    = BottomSheetDialog(this)
+        val owner    = SheetLifecycleOwner()
+        val rv       = buildSheetRecycler()
+        val adapter  = BookmarkHistoryAdapter(
             onItemClick  = { url -> loadUrl(url); sheet.dismiss() },
             onItemDelete = { item -> viewModel.deleteBookmarkItem(item) }
         )
         rv.adapter = adapter
-
-        sheetOwner.start()
-        viewModel.bookmarks.observe(sheetOwner) { list -> adapter.submitBookmarks(list) }
-
-        sheet.setOnDismissListener { sheetOwner.destroy() }
+        owner.start()
+        viewModel.bookmarks.observe(owner) { adapter.submitBookmarks(it) }
+        sheet.setOnDismissListener { owner.destroy() }
         sheet.setContentView(rv)
         sheet.show()
     }
 
     private fun showHistorySheet() {
-        val sheet = BottomSheetDialog(this)
-        val sheetOwner = SheetLifecycleOwner()
-        val rv = RecyclerView(this).apply {
-            layoutManager = LinearLayoutManager(this@MainActivity)
-            setPadding(0, 16, 0, 32)
-        }
+        val sheet   = BottomSheetDialog(this)
+        val owner   = SheetLifecycleOwner()
+        val rv      = buildSheetRecycler()
         val adapter = BookmarkHistoryAdapter(
             onItemClick  = { url -> loadUrl(url); sheet.dismiss() },
             onItemDelete = { item -> viewModel.deleteHistoryItem(item) }
         )
         rv.adapter = adapter
-
-        sheetOwner.start()
-        viewModel.history.observe(sheetOwner) { list -> adapter.submitHistory(list) }
-
-        sheet.setOnDismissListener { sheetOwner.destroy() }
+        owner.start()
+        viewModel.history.observe(owner) { adapter.submitHistory(it) }
+        sheet.setOnDismissListener { owner.destroy() }
         sheet.setContentView(rv)
         sheet.show()
     }
 
-    /**
-     * Minimal LifecycleOwner that can be started and destroyed manually.
-     * Used to scope LiveData observations inside BottomSheetDialogs so
-     * they don't leak into the Activity after the sheet is dismissed.
-     */
+    private fun buildSheetRecycler() = RecyclerView(this).apply {
+        layoutManager = LinearLayoutManager(this@MainActivity)
+        setPadding(0, 16, 0, 32)
+    }
+
     private class SheetLifecycleOwner : LifecycleOwner {
         private val registry = LifecycleRegistry(this)
         override val lifecycle: Lifecycle get() = registry
@@ -350,14 +364,12 @@ class MainActivity : AppCompatActivity() {
         fun destroy() { registry.currentState = Lifecycle.State.DESTROYED }
     }
 
-
     // ── WebView factory ───────────────────────────────────────────────────────
 
     private fun createWebView(): WebView {
         return WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
             )
             settings.apply {
                 javaScriptEnabled    = true
@@ -372,8 +384,7 @@ class MainActivity : AppCompatActivity() {
                 mediaPlaybackRequiresUserGesture = false
                 databaseEnabled      = true
                 allowFileAccess      = true
-                // Strip WebView suffix so sites don't serve degraded content
-                userAgentString      = settings.userAgentString.replace("; wv", "")
+                userAgentString      = settings.userAgentString.replace(\"; wv\", \"\")
             }
 
             CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
@@ -395,25 +406,25 @@ class MainActivity : AppCompatActivity() {
                         binding.progressBar.isInvisible = true
                         updateUrlDisplay()
                         updateNavState()
+                        // Inject enabled user scripts
                         val scriptsOn = prefs.getBoolean(SettingsActivity.PREF_SCRIPTS_ENABLED, true)
                         if (scriptsOn) {
-                            activeUserScripts.forEach { script ->
-                                view.evaluateJavascript(script, null)
+                            loadActiveScripts().forEach { code ->
+                                view.evaluateJavascript(code, null)
                             }
                         }
                     }
                 }
 
                 override fun shouldInterceptRequest(
-                    view: WebView,
-                    request: WebResourceRequest
+                    view: WebView, request: WebResourceRequest
                 ): WebResourceResponse? {
                     if (isAdBlockEnabled) {
-                        val host = request.url.host ?: ""
+                        val host = request.url.host ?: \"\"
                         if (adBlockDomains.any { host.contains(it) }) {
                             return WebResourceResponse(
-                                "text/plain", "UTF-8",
-                                java.io.ByteArrayInputStream("".toByteArray())
+                                \"text/plain\", \"UTF-8\",
+                                java.io.ByteArrayInputStream(\"\".toByteArray())
                             )
                         }
                     }
@@ -421,16 +432,13 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun shouldOverrideUrlLoading(
-                    view: WebView,
-                    request: WebResourceRequest
+                    view: WebView, request: WebResourceRequest
                 ): Boolean {
-                    val scheme = request.url.scheme ?: ""
-                    return if (scheme == "http" || scheme == "https") {
-                        false
-                    } else {
-                        try {
-                            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, request.url))
-                        } catch (_: Exception) {}
+                    val scheme = request.url.scheme ?: \"\"
+                    return if (scheme == \"http\" || scheme == \"https\") false
+                    else {
+                        try { startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
+                        catch (_: Exception) {}
                         true
                     }
                 }
@@ -450,10 +458,37 @@ class MainActivity : AppCompatActivity() {
                         viewModel.onTitleReceived(title)
                     }
                 }
+
+                /** Called when the browser gets a favicon — update tabs adapter live. */
+                override fun onReceivedIcon(view: WebView, icon: Bitmap) {
+                    super.onReceivedIcon(view, icon)
+                    // Find which tab this WebView belongs to
+                    val tabId = webViews.entries.firstOrNull { it.value === view }?.key ?: return
+                    // Update Tab model
+                    val tabList = viewModel.tabs.value ?: return
+                    val tabIdx  = tabList.indexOfFirst { it.id == tabId }
+                    if (tabIdx >= 0) {
+                        tabList[tabIdx] = tabList[tabIdx].copy(favicon = icon)
+                        viewModel.tabs.value?.set(tabIdx, tabList[tabIdx])
+                    }
+                }
             }
         }
     }
 
+    // ── User script loader ────────────────────────────────────────────────────
+
+    /** Load enabled script codes from SharedPreferences. */
+    private fun loadActiveScripts(): List<String> {
+        val json = prefs.getString(SettingsActivity.PREF_SCRIPTS_JSON, \"[]\") ?: \"[]\"
+        return try {
+            val arr = JSONArray(json)
+            (0 until arr.length()).mapNotNull { i ->
+                val obj = arr.getJSONObject(i)
+                if (obj.optBoolean(\"enabled\", true)) obj.optString(\"code\") else null
+            }.filter { it.isNotBlank() }
+        } catch (_: Exception) { emptyList() }
+    }
 
     // ── URL loading & display ─────────────────────────────────────────────────
 
@@ -480,12 +515,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUrlDisplay() {
         if (!binding.urlEditText.hasFocus()) {
-            val url = currentWebView?.url ?: viewModel.activeTab?.url ?: ""
+            val url = currentWebView?.url ?: viewModel.activeTab?.url ?: \"\"
             binding.urlEditText.setText(UrlUtils.getDisplayUrl(url))
         }
     }
 
-    // ── Helper: homepage URL from prefs ───────────────────────────────────────
+    // ── Homepage URL ──────────────────────────────────────────────────────────
 
     private fun getHomepageUrl(): String =
         prefs.getString(SettingsActivity.PREF_HOMEPAGE_URL, SettingsActivity.DEFAULT_HOMEPAGE)
@@ -496,10 +531,7 @@ class MainActivity : AppCompatActivity() {
     private fun clearBrowsingData() = performClearData(showToast = true)
 
     private fun performClearData(showToast: Boolean) {
-        webViews.values.forEach { wv ->
-            wv.clearCache(true)
-            wv.clearHistory()
-        }
+        webViews.values.forEach { wv -> wv.clearCache(true); wv.clearHistory() }
         WebStorage.getInstance().deleteAllData()
         CookieManager.getInstance().removeAllCookies(null)
         CookieManager.getInstance().flush()
@@ -512,15 +544,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun toggleDesktopMode() {
         val wv = currentWebView ?: return
-        val isDesktop = wv.settings.userAgentString.contains("X11")
+        val isDesktop = wv.settings.userAgentString.contains(\"X11\")
         wv.settings.userAgentString = if (isDesktop) {
             wv.settings.userAgentString
-                .replace("X11; Linux x86_64", "Linux; Android 13; Pixel 7")
-                .replace("Chrome/", "Mobile Chrome/")
+                .replace(\"X11; Linux x86_64\", \"Linux; Android 13; Pixel 7\")
+                .replace(\"Chrome/\", \"Mobile Chrome/\")
         } else {
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+            \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36\"
         }
-        showSnackbar(if (isDesktop) "Mobile mode" else "Desktop mode")
+        showSnackbar(if (isDesktop) \"Mobile mode\" else \"Desktop mode\")
         wv.reload()
     }
 
@@ -528,53 +560,39 @@ class MainActivity : AppCompatActivity() {
 
     private fun shareCurrentUrl() {
         val url = viewModel.activeTab?.url ?: return
-        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(android.content.Intent.EXTRA_TEXT, url)
-        }
-        startActivity(android.content.Intent.createChooser(intent, getString(R.string.share_url)))
+        startActivity(Intent.createChooser(
+            Intent(Intent.ACTION_SEND).apply { type = \"text/plain\"; putExtra(Intent.EXTRA_TEXT, url) },
+            getString(R.string.share_url)
+        ))
     }
 
     private fun copyCurrentUrl() {
         val url = viewModel.activeTab?.url ?: return
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("URL", url))
+        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+            .setPrimaryClip(ClipData.newPlainText(\"URL\", url))
         showSnackbar(getString(R.string.url_copied))
     }
 
-
-    /**
-     * Copy cookies for the current page to clipboard.
-     * Also triggers haptic vibration and shows a Snackbar success message.
-     * The button is only visible when a real http(s) page is loaded.
-     */
     private fun copyCurrentCookies() {
         val url     = currentWebView?.url ?: viewModel.activeTab?.url ?: return
         val cookies = CookieManager.getInstance().getCookie(url)
-        if (cookies.isNullOrBlank()) {
-            showSnackbar("No cookies found for this page")
-            return
-        }
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("Cookies", cookies))
+        if (cookies.isNullOrBlank()) { showSnackbar(\"No cookies found for this page\"); return }
+        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+            .setPrimaryClip(ClipData.newPlainText(\"Cookies\", cookies))
         vibrate()
         showSnackbar(getString(R.string.cookies_copied))
     }
 
-    /** Short 50ms haptic click — works on API 26+ with VibrationEffect, falls back on older. */
-    @Suppress("DEPRECATION")
+    @Suppress(\"DEPRECATION\")
     private fun vibrate() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vm = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vm.defaultVibrator.vibrate(
-                VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
-            )
+            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager)
+                .defaultVibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val vm = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            vm.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
+                .vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
         } else {
-            val vm = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            vm.vibrate(50)
+            (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).vibrate(50)
         }
     }
 
@@ -590,15 +608,9 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    binding.urlEditText.hasFocus() -> {
-                        hideKeyboard()
-                        binding.urlEditText.clearFocus()
-                    }
+                    binding.urlEditText.hasFocus() -> { hideKeyboard(); binding.urlEditText.clearFocus() }
                     currentWebView?.canGoBack() == true -> currentWebView?.goBack()
-                    else -> {
-                        isEnabled = false
-                        onBackPressedDispatcher.onBackPressed()
-                    }
+                    else -> { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
                 }
             }
         })
@@ -607,10 +619,7 @@ class MainActivity : AppCompatActivity() {
     // ── SwipeRefresh ──────────────────────────────────────────────────────────
 
     private fun setupSwipeRefresh() {
-        // Only trigger pull-to-refresh when WebView is at the very top
-        binding.swipeRefresh.setOnChildScrollUpCallback { _, _ ->
-            currentWebView?.scrollY != 0
-        }
+        binding.swipeRefresh.setOnChildScrollUpCallback { _, _ -> currentWebView?.scrollY != 0 }
         binding.swipeRefresh.setOnRefreshListener {
             currentWebView?.reload()
             binding.swipeRefresh.isRefreshing = false
@@ -621,8 +630,8 @@ class MainActivity : AppCompatActivity() {
     // ── Keyboard ──────────────────────────────────────────────────────────────
 
     private fun hideKeyboard() {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        currentFocus?.let { imm.hideSoftInputFromWindow(it.windowToken, 0) }
+        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+            .hideSoftInputFromWindow(currentFocus?.windowToken, 0)
         binding.urlEditText.clearFocus()
     }
 }
