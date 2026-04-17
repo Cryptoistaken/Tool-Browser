@@ -11,6 +11,7 @@ jobs:
   debug:
     name: Build Debug APK
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -19,34 +20,50 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+          cache: gradle  # Caches ~/.gradle/caches & wrapper automatically
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Cache Gradle
+      # Persists Gradle's remote build cache across runs — dramatically speeds
+      # up incremental builds by reusing task outputs from previous CI runs.
+      - name: Cache Gradle build cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-gradle-
+            ~/.gradle/build-cache
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      - name: Run kapt (capture detailed logs)
+      # Single Gradle invocation: assembleDebug already runs kapt internally.
+      # Removed the separate kaptDebugKotlin step to avoid building twice.
+      # --configuration-cache: reuses task graph from previous runs (Gradle 8+).
+      # --build-cache: reuses task outputs cached from previous runs.
+      # --parallel: builds independent modules concurrently.
+      # --no-daemon: safe for CI (daemon is useless across ephemeral runners).
+      - name: Build Debug APK
         run: |
-          ./gradlew :app:kaptDebugKotlin --no-daemon --stacktrace --debug -Dkapt.verbose=true -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g" 2>&1 | tee kapt.log
+          ./gradlew assembleDebug \
+            --no-daemon \
+            --build-cache \
+            --parallel \
+            --configuration-cache \
+            --stacktrace \
+            -Dkapt.incremental.apt=true \
+            -Dkapt.use.worker.api=true \
+            -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g -XX:+UseParallelGC" \
+            2>&1 | tee build.log
 
-      - name: Upload kapt log
-        if: always()
+      - name: Upload build log (on failure)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: kapt-log
-          path: kapt.log
+          name: build-log
+          path: build.log
           retention-days: 7
-
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --build-cache --parallel --info --stacktrace -Dkapt.verbose=true -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g"
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -72,17 +89,16 @@ jobs:
   #     - name: Grant execute permission for gradlew
   #       run: chmod +x gradlew
   #
-  #     - name: Cache Gradle
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: |
-  #           ~/.gradle/caches
-  #           ~/.gradle/wrapper
-  #         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-  #         restore-keys: ${{ runner.os }}-gradle-
-  #
   #     - name: Build Release APK
-  #       run: ./gradlew assembleRelease --no-daemon --build-cache --parallel --info --stacktrace -Dkapt.verbose=true -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g"
+  #       run: |
+  #         ./gradlew assembleRelease \
+  #           --no-daemon \
+  #           --build-cache \
+  #           --parallel \
+  #           --configuration-cache \
+  #           -Dkapt.incremental.apt=true \
+  #           -Dkapt.use.worker.api=true \
+  #           -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g -XX:+UseParallelGC"
   #
   #     - name: Upload Release APK
   #       uses: actions/upload-artifact@v4
