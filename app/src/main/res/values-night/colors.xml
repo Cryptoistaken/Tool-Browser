@@ -8,4 +8,6 @@
     <color name="outline">@color/outline_night</color>
     <color name="url_bar_bg">@color/url_bar_bg_night</color>
     <color name="primary">@color/primary_night</color>
+    <!-- In dark mode the switch thumb must be dark so it shows on the bright track -->
+    <color name="on_primary">#111111</color>
 </resources>

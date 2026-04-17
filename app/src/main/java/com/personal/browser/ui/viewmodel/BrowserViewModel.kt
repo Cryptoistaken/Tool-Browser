@@ -143,6 +143,15 @@ class BrowserViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Suspend version of clearHistory for use with runBlocking in onDestroy.
+     * Unlike clearHistory(), this guarantees the Room DELETE completes before
+     * the caller returns, which matters when the process is about to exit.
+     */
+    suspend fun clearHistorySync() {
+        historyRepository.clearHistory()
+    }
+
     /** Called when user swipes / deletes a bookmark from the bookmarks sheet. */
     fun deleteBookmarkItem(item: com.personal.browser.ui.adapter.BookmarkHistoryItem) {
         if (item is com.personal.browser.ui.adapter.BookmarkHistoryItem.BookmarkItem) {

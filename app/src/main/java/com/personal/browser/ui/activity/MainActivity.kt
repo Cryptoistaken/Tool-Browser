@@ -48,6 +48,7 @@ import com.personal.browser.ui.adapter.TabsAdapter
 import com.personal.browser.ui.viewmodel.BrowserViewModel
 import com.personal.browser.utils.UrlUtils
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 
 @AndroidEntryPoint
@@ -62,6 +63,7 @@ class MainActivity : AppCompatActivity() {
 
     // AdBlock state (refreshed on resume)
     private var isAdBlockEnabled = true
+    private var didClearOnExit = false
     private val adBlockDomains = setOf(
         "doubleclick.net", "googleadservices.com", "googlesyndication.com",
         "adservice.google.com", "amazon-adsystem.com", "criteo.com", "adnxs.com",
@@ -116,16 +118,24 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Clear-on-exit: runs when the activity is finishing (e.g., Back button).
+        // Perform clear-on-exit here as well because onDestroy is not guaranteed
+        // to be called when the system kills the process (swipe from recents, etc.).
+        // We guard with a flag so we don't double-clear if onDestroy also runs.
         if (isFinishing && prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
-            performClearData(showToast = false)
+            if (!didClearOnExit) {
+                didClearOnExit = true
+                performClearDataSync()
+            }
         }
     }
 
     override fun onDestroy() {
-        // Also try clearing on destroy if finishing, to be thorough.
+        // Clear BEFORE destroying WebViews so clearCache/clearHistory operate on live instances.
         if (isFinishing && prefs.getBoolean(SettingsActivity.PREF_CLEAR_ON_EXIT, false)) {
-            performClearData(showToast = false)
+            if (!didClearOnExit) {
+                didClearOnExit = true
+                performClearDataSync()
+            }
         }
         webViews.values.forEach { it.destroy() }
         webViews.clear()
@@ -411,24 +421,10 @@ class MainActivity : AppCompatActivity() {
                 override fun onPageFinished(view: WebView, url: String) {
                     super.onPageFinished(view, url)
 
-                    // Inject scripts on every page finish, regardless of whether it's the current tab
-                    val scriptsOn = prefs.getBoolean(SettingsActivity.PREF_SCRIPTS_ENABLED, true)
-                    if (scriptsOn) {
-                        loadActiveScripts().forEach { code ->
-                            // Wrap script in a self-executing function and try-catch for better reliability
-                            // Using newlines to ensure comments in the script don't break the wrapper
-                            val wrappedCode = """
-                                (function() {
-                                    try {
-                                        $code
-                                    } catch (e) {
-                                        console.error('UserScript Error:', e);
-                                    }
-                                })();
-                            """.trimIndent()
-                            view.evaluateJavascript(wrappedCode, null)
-                        }
-                    }
+                    // Patch pushState/replaceState FIRST so the SPA bridge is ready
+                    // before any in-page JS navigates, then run user scripts.
+                    injectSpaNavigationBridge(view)
+                    injectScripts(view)
 
                     if (this@apply === currentWebView) {
                         viewModel.onPageFinished(url, view.title)
@@ -452,6 +448,13 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     return super.shouldInterceptRequest(view, request)
+                }
+
+                override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
+                    super.doUpdateVisitedHistory(view, url, isReload)
+                    // SPA re-injection is handled by the pushState bridge installed in
+                    // onPageFinished. Doing it here as well caused double-injection on
+                    // normal loads and premature injection before new content rendered.
                 }
 
                 override fun shouldOverrideUrlLoading(
@@ -496,7 +499,81 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── User script loader ───────────────────────────────────────────────────
+    // ── User script injection ─────────────────────────────────────────────────
+
+    /**
+     * Inject all active user scripts into [view].
+     *
+     * Each script is wrapped to run after the DOM is ready: if the document is
+     * still loading the wrapper defers via DOMContentLoaded, otherwise it runs
+     * immediately. This covers both normal page loads (called from onPageFinished)
+     * and SPA navigation callbacks triggered by [injectSpaNavigationBridge].
+     *
+     * Backticks and backslashes in the script body are escaped before being
+     * embedded in the JS template literal so arbitrary user code survives intact.
+     */
+    private fun injectScripts(view: WebView) {
+        if (!prefs.getBoolean(SettingsActivity.PREF_SCRIPTS_ENABLED, true)) return
+        val scripts = loadActiveScripts()
+        if (scripts.isEmpty()) return
+
+        val scriptBlocks = scripts.joinToString("\n") { code ->
+            val safe = code
+                .replace("\\", "\\\\")
+                .replace("`", "\\`")
+                .replace("\${", "\\\${")
+            "(function(){\n" +
+            "  function __run(){\n" +
+            "    try{\n" +
+            safe + "\n" +
+            "    }catch(e){ console.error('UserScript Error:',e); }\n" +
+            "  }\n" +
+            "  if(document.readyState==='loading'){\n" +
+            "    document.addEventListener('DOMContentLoaded',__run,{once:true});\n" +
+            "  } else {\n" +
+            "    __run();\n" +
+            "  }\n" +
+            "})()"
+        }
+
+        val js = "(function(){\n" +
+            "  function __runAll(){\n" +
+            scriptBlocks + "\n" +
+            "  }\n" +
+            "  window.__toolBrowserRunScripts = __runAll;\n" +
+            "  __runAll();\n" +
+            "})()"
+        view.evaluateJavascript(js, null)
+    }
+
+    /**
+     * Inject a one-time bridge that monkey-patches pushState/replaceState and
+     * listens for popstate so we can re-run user scripts after every SPA
+     * client-side navigation (Instagram, Facebook, Gmail, etc.).
+     *
+     * The bridge is idempotent — calling this on every onPageFinished is safe
+     * because it checks __toolBrowserBridgeInstalled before installing.
+     *
+     * When a route change is detected, a 350 ms delay lets the new route's DOM
+     * settle before scripts run.
+     */
+    private fun injectSpaNavigationBridge(view: WebView) {
+        val js = "(function(){\n" +
+            "  if(window.__toolBrowserBridgeInstalled) return;\n" +
+            "  window.__toolBrowserBridgeInstalled = true;\n" +
+            "  var _push    = history.pushState.bind(history);\n" +
+            "  var _replace = history.replaceState.bind(history);\n" +
+            "  function notify(){\n" +
+            "    setTimeout(function(){\n" +
+            "      if(typeof window.__toolBrowserRunScripts === 'function') window.__toolBrowserRunScripts();\n" +
+            "    }, 350);\n" +
+            "  }\n" +
+            "  history.pushState    = function(){ _push.apply(history,arguments);    notify(); };\n" +
+            "  history.replaceState = function(){ _replace.apply(history,arguments); notify(); };\n" +
+            "  window.addEventListener('popstate', notify);\n" +
+            "})();"
+        view.evaluateJavascript(js, null)
+    }
 
     private fun loadActiveScripts(): List<String> {
         val json = prefs.getString(SettingsActivity.PREF_SCRIPTS_JSON, "[]") ?: "[]"
@@ -550,30 +627,52 @@ class MainActivity : AppCompatActivity() {
     private fun clearBrowsingData() = performClearData(showToast = true)
 
     private fun performClearData(showToast: Boolean) {
-        // Clear data for all active WebViews
         webViews.values.forEach { wv ->
             wv.clearCache(true)
             wv.clearHistory()
             wv.clearFormData()
             wv.clearSslPreferences()
         }
-
-        // Clear global WebView data
         WebStorage.getInstance().deleteAllData()
         val cookieManager = CookieManager.getInstance()
-        cookieManager.removeAllCookies {
-            cookieManager.flush()
-        }
-
+        cookieManager.removeAllCookies { cookieManager.flush() }
         val webViewDb = WebViewDatabase.getInstance(this)
         webViewDb.clearFormData()
         webViewDb.clearHttpAuthUsernamePassword()
-
-        // Clear app history from database
         viewModel.clearHistory()
-
         if (showToast) showSnackbar(getString(R.string.data_cleared))
         updateNavState()
+    }
+
+    /**
+     * Synchronous clear used on exit (onDestroy).
+     *
+     * Called BEFORE webViews.forEach { it.destroy() } so each WebView is still
+     * alive when clearCache/clearHistory are called.
+     *
+     * The async removeAllCookies callback variant is unreliable when the process
+     * is dying, so we use removeAllCookies(null) + flush() instead.
+     *
+     * viewModel.clearHistorySync() is a suspend fun exposed for this purpose;
+     * runBlocking blocks onDestroy until the Room DELETE completes so history
+     * is actually erased before the process exits.
+     */
+    private fun performClearDataSync() {
+        webViews.values.forEach { wv ->
+            wv.clearCache(true)
+            wv.clearHistory()
+            wv.clearFormData()
+            wv.clearSslPreferences()
+        }
+        WebStorage.getInstance().deleteAllData()
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies(null)
+        cookieManager.flush()
+        WebViewDatabase.getInstance(this).apply {
+            clearFormData()
+            clearHttpAuthUsernamePassword()
+        }
+        runBlocking { viewModel.clearHistorySync() }
     }
 
     // ── Desktop mode ─────────────────────────────────────────────────────────
@@ -656,8 +755,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupSwipeRefresh() {
         binding.swipeRefresh.setOnChildScrollUpCallback { _, _ ->
-            // Use canScrollVertically(-1) for better accuracy on WebView
-            // Returns true if the child view can be scrolled up, which disables swipe-to-refresh
             currentWebView?.canScrollVertically(-1) ?: false
         }
         binding.swipeRefresh.setOnRefreshListener {

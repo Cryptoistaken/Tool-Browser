@@ -4,10 +4,21 @@
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_variant</item>
         <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorSecondary">@color/primary</item>
+        <item name="colorOnSecondary">@color/on_primary</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="android:windowBackground">@color/background</item>
         <item name="android:statusBarColor">@color/surface</item>
         <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
         <item name="android:fontFamily">sans-serif</item>
+        <!-- SwitchMaterial uses colorSecondary for thumb/track, map to primary -->
+        <item name="colorControlActivated">@color/primary</item>
+        <!-- Surface attrs used by drawables and layouts via ?attr/ -->
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <!-- Icon tint follows on_surface automatically -->
+        <item name="colorControlNormal">@color/on_surface</item>
     </style>
 </resources>
