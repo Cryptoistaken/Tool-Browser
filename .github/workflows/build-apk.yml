@@ -20,30 +20,22 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle  # Caches ~/.gradle/caches & wrapper automatically
+          cache: gradle
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Persists Gradle's remote build cache across runs — dramatically speeds
-      # up incremental builds by reusing task outputs from previous CI runs.
-      - name: Cache Gradle build cache
+      - name: Cache Gradle & KSP outputs
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
             ~/.gradle/build-cache
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # Single Gradle invocation: assembleDebug already runs kapt internally.
-      # Removed the separate kaptDebugKotlin step to avoid building twice.
-      # --configuration-cache: reuses task graph from previous runs (Gradle 8+).
-      # --build-cache: reuses task outputs cached from previous runs.
-      # --parallel: builds independent modules concurrently.
-      # --no-daemon: safe for CI (daemon is useless across ephemeral runners).
       - name: Build Debug APK
         run: |
           ./gradlew assembleDebug \
@@ -52,8 +44,6 @@ jobs:
             --parallel \
             --configuration-cache \
             --stacktrace \
-            -Dkapt.incremental.apt=true \
-            -Dkapt.use.worker.api=true \
             -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g -XX:+UseParallelGC" \
             2>&1 | tee build.log
 
@@ -71,38 +61,3 @@ jobs:
           name: personal-browser-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-
-  # release:  # TODO: re-enable when ready to sign releases
-  #   name: Build Release APK
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Set up JDK 17
-  #       uses: actions/setup-java@v4
-  #       with:
-  #         java-version: '17'
-  #         distribution: 'temurin'
-  #         cache: gradle
-  #
-  #     - name: Grant execute permission for gradlew
-  #       run: chmod +x gradlew
-  #
-  #     - name: Build Release APK
-  #       run: |
-  #         ./gradlew assembleRelease \
-  #           --no-daemon \
-  #           --build-cache \
-  #           --parallel \
-  #           --configuration-cache \
-  #           -Dkapt.incremental.apt=true \
-  #           -Dkapt.use.worker.api=true \
-  #           -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g -XX:+UseParallelGC"
-  #
-  #     - name: Upload Release APK
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: personal-browser-release
-  #         path: app/build/outputs/apk/release/app-release-unsigned.apk
-  #         retention-days: 90

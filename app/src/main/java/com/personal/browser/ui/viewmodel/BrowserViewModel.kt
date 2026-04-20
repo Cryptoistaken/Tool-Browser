@@ -1,48 +1,55 @@
 package com.personal.browser.ui.viewmodel
 
+import android.app.Application
 import android.graphics.Bitmap
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.personal.browser.data.database.BrowserDatabase
+import com.personal.browser.data.model.Bookmark
+import com.personal.browser.data.model.HistoryEntry
 import com.personal.browser.data.model.Tab
 import com.personal.browser.data.repository.BookmarkRepository
 import com.personal.browser.data.repository.HistoryRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import kotlinx.coroutines.runBlocking
 
-@HiltViewModel
-class BrowserViewModel @Inject constructor(
-    private val bookmarkRepository: BookmarkRepository,
-    private val historyRepository: HistoryRepository
-) : ViewModel() {
+class BrowserViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _tabs = MutableLiveData<List<Tab>>(emptyList())
-    val tabs: LiveData<List<Tab>> = _tabs
+    private val db = BrowserDatabase.getInstance(application)
+    private val bookmarkRepository = BookmarkRepository(db.bookmarkDao())
+    private val historyRepository = HistoryRepository(db.historyDao())
 
-    private val _activeTabIndex = MutableLiveData(0)
-    val activeTabIndex: LiveData<Int> = _activeTabIndex
+    private val _tabs = MutableStateFlow<List<Tab>>(emptyList())
+    val tabs: StateFlow<List<Tab>> = _tabs.asStateFlow()
 
-    private val _isBookmarked = MutableLiveData(false)
-    val isBookmarked: LiveData<Boolean> = _isBookmarked
+    private val _activeTabIndex = MutableStateFlow(0)
+    val activeTabIndex: StateFlow<Int> = _activeTabIndex.asStateFlow()
 
-    val bookmarks = bookmarkRepository.getAllBookmarks().asLiveData()
-    val history   = historyRepository.getHistory().asLiveData()
+    private val _isBookmarked = MutableStateFlow(false)
+    val isBookmarked: StateFlow<Boolean> = _isBookmarked.asStateFlow()
+
+    val bookmarks: StateFlow<List<Bookmark>> = bookmarkRepository.getAllBookmarks()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val history: StateFlow<List<HistoryEntry>> = historyRepository.getHistory()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val activeTab: Tab?
-        get() = _tabs.value?.getOrNull(_activeTabIndex.value ?: 0)
+        get() = _tabs.value.getOrNull(_activeTabIndex.value)
 
-    /** Call this once from MainActivity.onCreate with the homepage URL from SharedPreferences. */
     fun initWithHomepage(homepageUrl: String) {
-        if (_tabs.value.isNullOrEmpty()) {
+        if (_tabs.value.isEmpty()) {
             openNewTab(homepageUrl)
         }
     }
 
     fun openNewTab(url: String = "") {
-        val list = _tabs.value?.toMutableList() ?: mutableListOf()
+        val list = _tabs.value.toMutableList()
         list.add(Tab(url = url))
         _tabs.value = list
         _activeTabIndex.value = list.size - 1
@@ -50,16 +57,15 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun closeTab(index: Int) {
-        val list = _tabs.value?.toMutableList() ?: return
+        val list = _tabs.value.toMutableList()
         if (list.size <= 1) {
-            // Keep at least one tab, reset it instead of removing
             list[0] = Tab()
             _tabs.value = list
             return
         }
         list.removeAt(index)
         _tabs.value = list
-        val current = _activeTabIndex.value ?: 0
+        val current = _activeTabIndex.value
         if (current >= list.size) {
             _activeTabIndex.value = list.size - 1
         }
@@ -67,7 +73,7 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun switchTab(index: Int) {
-        val list = _tabs.value ?: return
+        val list = _tabs.value
         if (index in list.indices) {
             _activeTabIndex.value = index
             checkBookmarkStatus()
@@ -75,8 +81,8 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun updateActiveTab(update: Tab.() -> Unit) {
-        val list = _tabs.value?.toMutableList() ?: return
-        val idx  = _activeTabIndex.value ?: 0
+        val list = _tabs.value.toMutableList()
+        val idx = _activeTabIndex.value
         if (idx in list.indices) {
             list[idx] = list[idx].copy().apply(update)
             _tabs.value = list
@@ -85,10 +91,10 @@ class BrowserViewModel @Inject constructor(
 
     fun onPageStarted(url: String, title: String?) {
         updateActiveTab {
-            this.url      = url
-            this.title    = title ?: "Loading…"
+            this.url = url
+            this.title = title ?: "Loading…"
             this.isLoading = true
-            this.progress  = 10
+            this.progress = 10
         }
         viewModelScope.launch {
             _isBookmarked.value = bookmarkRepository.isBookmarked(url)
@@ -97,10 +103,10 @@ class BrowserViewModel @Inject constructor(
 
     fun onPageFinished(url: String, title: String?) {
         updateActiveTab {
-            this.url       = url
-            this.title     = title ?: url
+            this.url = url
+            this.title = title ?: url
             this.isLoading = false
-            this.progress  = 100
+            this.progress = 100
         }
         if (url.isNotEmpty() && !url.startsWith("about:")) {
             viewModelScope.launch {
@@ -116,7 +122,7 @@ class BrowserViewModel @Inject constructor(
 
     fun onNavigationStateChanged(canGoBack: Boolean, canGoForward: Boolean) {
         updateActiveTab {
-            this.canGoBack    = canGoBack
+            this.canGoBack = canGoBack
             this.canGoForward = canGoForward
         }
     }
@@ -128,7 +134,7 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun onReceivedIcon(tabId: String, icon: Bitmap) {
-        val list = _tabs.value?.toMutableList() ?: return
+        val list = _tabs.value.toMutableList()
         val idx = list.indexOfFirst { it.id == tabId }
         if (idx >= 0) {
             list[idx] = list[idx].copy(favicon = icon)
@@ -146,38 +152,25 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun clearHistory() {
-        viewModelScope.launch {
-            historyRepository.clearHistory()
-        }
+        viewModelScope.launch { historyRepository.clearHistory() }
     }
 
-    /**
-     * Suspend version of clearHistory for use with runBlocking in onDestroy.
-     */
     suspend fun clearHistorySync() {
         historyRepository.clearHistory()
     }
 
-    /** Called when user swipes / deletes a bookmark from the bookmarks sheet. */
-    fun deleteBookmarkItem(item: com.personal.browser.ui.adapter.BookmarkHistoryItem) {
-        if (item is com.personal.browser.ui.adapter.BookmarkHistoryItem.BookmarkItem) {
-            viewModelScope.launch {
-                bookmarkRepository.removeBookmark(item.bookmark.url)
-                val activeUrl = activeTab?.url ?: ""
-                if (activeUrl.isNotEmpty()) {
-                    _isBookmarked.value = bookmarkRepository.isBookmarked(activeUrl)
-                }
+    fun deleteBookmark(bookmark: Bookmark) {
+        viewModelScope.launch {
+            bookmarkRepository.removeBookmark(bookmark.url)
+            val activeUrl = activeTab?.url ?: ""
+            if (activeUrl.isNotEmpty()) {
+                _isBookmarked.value = bookmarkRepository.isBookmarked(activeUrl)
             }
         }
     }
 
-    /** Called when user swipes / deletes a history entry from the history sheet. */
-    fun deleteHistoryItem(item: com.personal.browser.ui.adapter.BookmarkHistoryItem) {
-        if (item is com.personal.browser.ui.adapter.BookmarkHistoryItem.HistoryItem) {
-            viewModelScope.launch {
-                historyRepository.deleteEntry(item.entry.id)
-            }
-        }
+    fun deleteHistoryEntry(entry: HistoryEntry) {
+        viewModelScope.launch { historyRepository.deleteEntry(entry.id) }
     }
 
     private fun checkBookmarkStatus() {

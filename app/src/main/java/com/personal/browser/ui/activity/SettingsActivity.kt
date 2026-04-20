@@ -1,26 +1,38 @@
 package com.personal.browser.ui.activity
 
-import android.app.AlertDialog
+import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.inputmethod.EditorInfo
-import android.widget.ArrayAdapter
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.switchmaterial.SwitchMaterial
-import com.personal.browser.R
-import com.personal.browser.databinding.ActivitySettingsBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,431 +43,29 @@ import java.net.URL
 
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivitySettingsBinding
     private lateinit var prefs: SharedPreferences
 
-    // File picker for local-file script import
     private val filePickerLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) importScriptFromFile(uri)
-    }
+    ) { uri: Uri? -> if (uri != null) importScriptFromFile(uri) }
 
     companion object {
-        const val PREF_AD_BLOCKING      = "pref_ad_blocking"
-        const val PREF_BUILT_FILTERS    = "pref_built_in_filters"
-        const val PREF_EXPAND_CONTENT   = "pref_expand_content"
-        const val PREF_SCRIPTS_ENABLED  = "pref_scripts_enabled"
-        const val PREF_HOMEPAGE_URL     = "pref_homepage_url"
-        const val PREF_CLEAR_ON_EXIT    = "pref_clear_on_exit"
-        const val PREF_DARK_MODE        = "pref_dark_mode"
-        const val PREF_SCRIPTS_JSON     = "pref_scripts_json"
-        const val DEFAULT_HOMEPAGE      = "https://www.google.com"
+        const val PREF_AD_BLOCKING     = "pref_ad_blocking"
+        const val PREF_BUILT_FILTERS   = "pref_built_in_filters"
+        const val PREF_EXPAND_CONTENT  = "pref_expand_content"
+        const val PREF_SCRIPTS_ENABLED = "pref_scripts_enabled"
+        const val PREF_HOMEPAGE_URL    = "pref_homepage_url"
+        const val PREF_CLEAR_ON_EXIT   = "pref_clear_on_exit"
+        const val PREF_DARK_MODE       = "pref_dark_mode"
+        const val PREF_SCRIPTS_JSON    = "pref_scripts_json"
+        const val DEFAULT_HOMEPAGE     = "https://www.google.com"
 
         val HOMEPAGE_PRESETS = listOf(
             "https://www.google.com",
             "https://www.instagram.com/accounts/login",
             "https://m.facebook.com/"
         )
-        private const val CUSTOM_LABEL = "Custom…"
     }
-
-    // ── Lifecycle ────────────────────────────────────────────────────────────
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivitySettingsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        prefs = getSharedPreferences("browser_prefs", MODE_PRIVATE)
-
-        val mode = intent.getStringExtra("SETTINGS_MODE") ?: "GENERAL"
-        setupMode(mode)
-
-        binding.btnBackSettings.setOnClickListener { finish() }
-    }
-
-    // ── Route to the correct panel ────────────────────────────────────────────
-
-    private fun setupMode(mode: String) {
-        when (mode) {
-            "AD_BLOCKING" -> {
-                binding.tvSettingsTitle.text = "Ad Blocking"
-                binding.generalContainer.visibility    = View.GONE
-                binding.adBlockingContainer.visibility = View.VISIBLE
-                binding.scriptsContainer.visibility    = View.GONE
-                binding.btnSettingsAdd.visibility      = View.GONE
-                setupAdBlockingSwitches()
-            }
-            "SCRIPTS" -> {
-                binding.tvSettingsTitle.text = "User Scripts"
-                binding.generalContainer.visibility    = View.GONE
-                binding.adBlockingContainer.visibility = View.GONE
-                binding.scriptsContainer.visibility    = View.VISIBLE
-                binding.btnSettingsAdd.visibility      = View.VISIBLE
-                setupScriptsPanel()
-            }
-            else -> {
-                binding.tvSettingsTitle.text = "Settings"
-                binding.generalContainer.visibility    = View.VISIBLE
-                binding.adBlockingContainer.visibility = View.GONE
-                binding.scriptsContainer.visibility    = View.GONE
-                binding.btnSettingsAdd.visibility      = View.GONE
-                setupGeneralSettings()
-            }
-        }
-    }
-
-    // ── GENERAL SETTINGS ─────────────────────────────────────────────────────
-
-    private fun setupGeneralSettings() {
-
-        // Homepage spinner
-        val currentUrl = prefs.getString(PREF_HOMEPAGE_URL, DEFAULT_HOMEPAGE) ?: DEFAULT_HOMEPAGE
-        val spinnerItems = HOMEPAGE_PRESETS.toMutableList().also { it.add(CUSTOM_LABEL) }
-        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, spinnerItems)
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerHomepage.adapter = spinnerAdapter
-
-        val presetIndex = HOMEPAGE_PRESETS.indexOf(currentUrl)
-        if (presetIndex >= 0) {
-            binding.spinnerHomepage.setSelection(presetIndex)
-            binding.tilCustomHomepage.visibility = View.GONE
-        } else {
-            binding.spinnerHomepage.setSelection(spinnerItems.size - 1)
-            binding.tilCustomHomepage.visibility = View.VISIBLE
-            binding.etHomepageUrl.setText(currentUrl)
-        }
-
-        binding.spinnerHomepage.onItemSelectedListener =
-            object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: android.widget.AdapterView<*>, view: View?, pos: Int, id: Long
-                ) {
-                    if (pos == HOMEPAGE_PRESETS.size) {
-                        binding.tilCustomHomepage.visibility = View.VISIBLE
-                    } else {
-                        binding.tilCustomHomepage.visibility = View.GONE
-                        prefs.edit().putString(PREF_HOMEPAGE_URL, HOMEPAGE_PRESETS[pos]).apply()
-                    }
-                }
-                override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
-            }
-
-        binding.etHomepageUrl.setOnEditorActionListener { tv, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                saveCustomHomepage(tv.text.toString().trim()); true
-            } else false
-        }
-        binding.etHomepageUrl.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) saveCustomHomepage(binding.etHomepageUrl.text.toString().trim())
-        }
-
-        // Dark mode
-        binding.switchDarkMode.isChecked = prefs.getBoolean(PREF_DARK_MODE, false)
-        binding.switchDarkMode.setOnCheckedChangeListener { _, checked ->
-            prefs.edit().putBoolean(PREF_DARK_MODE, checked).apply()
-            AppCompatDelegate.setDefaultNightMode(
-                if (checked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
-            )
-        }
-
-        // Clear on exit — just save the pref; clearing runs in MainActivity.onStop
-        binding.switchClearOnExit.isChecked = prefs.getBoolean(PREF_CLEAR_ON_EXIT, false)
-        binding.switchClearOnExit.setOnCheckedChangeListener { _, checked ->
-            prefs.edit().putBoolean(PREF_CLEAR_ON_EXIT, checked).apply()
-        }
-
-        // Clear data now — signals MainActivity via RESULT_OK
-        binding.btnClearDataNow.setOnClickListener {
-            setResult(RESULT_OK, Intent().putExtra("ACTION", "CLEAR_DATA"))
-            finish()
-        }
-
-        // Navigate to sub-screens
-        binding.btnGoAdBlocking.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java)
-                .putExtra("SETTINGS_MODE", "AD_BLOCKING"))
-        }
-        binding.btnGoUserScripts.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java)
-                .putExtra("SETTINGS_MODE", "SCRIPTS"))
-        }
-    }
-
-    private fun saveCustomHomepage(url: String) {
-        val finalUrl = when {
-            url.isEmpty() -> DEFAULT_HOMEPAGE
-            url.startsWith("http://") || url.startsWith("https://") -> url
-            else -> "https://$url"
-        }
-        prefs.edit().putString(PREF_HOMEPAGE_URL, finalUrl).apply()
-        binding.etHomepageUrl.setText(finalUrl)
-    }
-
-    // ── AD BLOCKING ──────────────────────────────────────────────────────────
-
-    private fun setupAdBlockingSwitches() {
-        binding.switchAdBlocking.isChecked = prefs.getBoolean(PREF_AD_BLOCKING, true)
-        binding.switchFilters.isChecked    = prefs.getBoolean(PREF_BUILT_FILTERS, true)
-        binding.switchExpand.isChecked     = prefs.getBoolean(PREF_EXPAND_CONTENT, true)
-
-        binding.switchAdBlocking.setOnCheckedChangeListener { _, c ->
-            prefs.edit().putBoolean(PREF_AD_BLOCKING, c).apply()
-        }
-        binding.switchFilters.setOnCheckedChangeListener { _, c ->
-            prefs.edit().putBoolean(PREF_BUILT_FILTERS, c).apply()
-        }
-        binding.switchExpand.setOnCheckedChangeListener { _, c ->
-            prefs.edit().putBoolean(PREF_EXPAND_CONTENT, c).apply()
-        }
-    }
-
-    // ── USER SCRIPTS ─────────────────────────────────────────────────────────
-
-    private fun setupScriptsPanel() {
-        binding.switchEnableScripts.isChecked = prefs.getBoolean(PREF_SCRIPTS_ENABLED, true)
-        binding.switchEnableScripts.setOnCheckedChangeListener { _, c ->
-            prefs.edit().putBoolean(PREF_SCRIPTS_ENABLED, c).apply()
-        }
-        refreshScriptsList()
-        binding.btnSettingsAdd.setOnClickListener { showAddScriptDialog() }
-    }
-
-    /** Read scripts from prefs and rebuild the dynamic list UI. */
-    private fun refreshScriptsList() {
-        val container = binding.scriptsListContainer
-        container.removeAllViews()
-        val scripts = loadScripts()
-
-        if (scripts.isEmpty()) {
-            binding.tvNoScripts.visibility = View.VISIBLE
-            return
-        }
-        binding.tvNoScripts.visibility = View.GONE
-
-        scripts.forEachIndexed { index, script ->
-            val row = LayoutInflater.from(this).inflate(R.layout.item_script, container, false)
-            row.findViewById<TextView>(R.id.tvScriptName).text = script.name
-            row.findViewById<TextView>(R.id.tvScriptSource).text = script.source
-
-            val sw = row.findViewById<SwitchMaterial>(R.id.switchScript)
-            sw.isChecked = script.enabled
-            sw.setOnCheckedChangeListener { _, checked ->
-                scripts[index] = scripts[index].copy(enabled = checked)
-                saveScripts(scripts)
-            }
-
-            // Tap the row to edit
-            row.setOnClickListener { showEditScriptDialog(scripts, index) }
-
-            row.findViewById<View>(R.id.btnDeleteScript).setOnClickListener {
-                MaterialAlertDialogBuilder(this)
-                    .setTitle("Delete Script")
-                    .setMessage("Remove \"${script.name}\"?")
-                    .setPositiveButton("Delete") { _, _ ->
-                        val updated = loadScripts()
-                        if (index < updated.size) {
-                            updated.removeAt(index)
-                            saveScripts(updated)
-                        }
-                        refreshScriptsList()
-                        Toast.makeText(this, R.string.script_deleted, Toast.LENGTH_SHORT).show()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-            }
-            container.addView(row)
-        }
-    }
-
-    // ── Add script dialog ────────────────────────────────────────────────────
-
-    private fun showAddScriptDialog() {
-        val options = arrayOf(
-            getString(R.string.script_from_url),
-            getString(R.string.script_from_file),
-            getString(R.string.script_from_text)
-        )
-        MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.add_script))
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> showUrlInputDialog()
-                    1 -> filePickerLauncher.launch("text/*")
-                    2 -> showTextInputDialog()
-                }
-            }
-            .show()
-    }
-
-    /**
-     * Dialog: enter a URL to a remote .user.js file.
-     * We actually fetch the script content over the network before saving.
-     */
-    private fun showUrlInputDialog() {
-        val nameInput = EditText(this).apply {
-            hint = "Script name (optional)"
-        }
-        val urlInput = EditText(this).apply {
-            hint = "https://example.com/script.user.js"
-            inputType = android.text.InputType.TYPE_TEXT_VARIATION_URI
-        }
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 24, 48, 8)
-            addView(nameInput)
-            addView(urlInput)
-        }
-
-        MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.script_from_url))
-            .setView(layout)
-            .setPositiveButton("Fetch & Add") { _, _ ->
-                val rawUrl = urlInput.text.toString().trim()
-                val name   = nameInput.text.toString().trim()
-                if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
-                    fetchScriptFromUrl(rawUrl, name)
-                } else {
-                    Toast.makeText(this, R.string.invalid_url, Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    /**
-     * Fetch the JS content from [url] on a background thread, then save and
-     * refresh the list on the main thread.
-     */
-    private fun fetchScriptFromUrl(url: String, nameHint: String) {
-        val progressDialog = MaterialAlertDialogBuilder(this)
-            .setTitle("Fetching script…")
-            .setMessage(url)
-            .setCancelable(false)
-            .show()
-
-        lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 10_000
-                        readTimeout    = 15_000
-                        requestMethod  = "GET"
-                        setRequestProperty("User-Agent", "Mozilla/5.0")
-                    }
-                    try {
-                        if (conn.responseCode !in 200..299) {
-                            error("HTTP ${conn.responseCode}: ${conn.responseMessage}")
-                        }
-                        conn.inputStream.bufferedReader().readText()
-                    } finally {
-                        conn.disconnect()
-                    }
-                }
-            }
-            progressDialog.dismiss()
-
-            result.onSuccess { code ->
-                // Try to extract @name from UserScript metadata block
-                val metaName = Regex("""//\s*@name\s+(.+)""").find(code)?.groupValues?.getOrNull(1)?.trim()
-                val finalName = nameHint.ifEmpty { metaName ?: url.substringAfterLast("/") }
-                addScript(UserScript(name = finalName, source = url, code = code))
-            }.onFailure { err ->
-                Toast.makeText(this@SettingsActivity,
-                    "Failed to fetch script: ${err.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    /** Dialog: type or paste raw JS. */
-    private fun showTextInputDialog(existingScript: UserScript? = null, index: Int = -1) {
-        val nameInput = EditText(this).apply {
-            hint = "Script name"
-            setText(existingScript?.name ?: "")
-        }
-        val codeInput = EditText(this).apply {
-            hint = "// JavaScript code here…"
-            minLines = 6
-            maxLines = 14
-            gravity = android.view.Gravity.TOP
-            setText(existingScript?.code ?: "")
-        }
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(48, 24, 48, 8)
-            addView(nameInput)
-            addView(codeInput)
-        }
-        val title = if (existingScript != null) "Edit Script" else getString(R.string.script_from_text)
-        MaterialAlertDialogBuilder(this)
-            .setTitle(title)
-            .setView(layout)
-            .setPositiveButton(if (existingScript != null) "Save" else "Add") { _, _ ->
-                val name = nameInput.text.toString().trim().ifEmpty { "Custom Script" }
-                val code = codeInput.text.toString().trim()
-                if (code.isNotEmpty()) {
-                    if (existingScript != null && index >= 0) {
-                        updateScript(index, existingScript.copy(name = name, code = code))
-                    } else {
-                        addScript(UserScript(name = name, source = "text input", code = code))
-                    }
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    /** Edit dialog for an already-added script (any source type). */
-    private fun showEditScriptDialog(scripts: MutableList<UserScript>, index: Int) {
-        val script = scripts[index]
-        val options = mutableListOf("Edit name & code")
-        if (script.source.startsWith("http")) options.add("Re-fetch from URL")
-
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Edit \"${script.name}\"")
-            .setItems(options.toTypedArray()) { _, which ->
-                when {
-                    which == 0 -> showTextInputDialog(script, index)
-                    which == 1 -> fetchScriptFromUrl(script.source, script.name)
-                }
-            }
-            .show()
-    }
-
-    /** Read file content from URI and add as script. */
-    private fun importScriptFromFile(uri: Uri) {
-        try {
-            val code     = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return
-            val fileName = uri.lastPathSegment ?: "script.js"
-            // Try to extract @name from UserScript metadata
-            val metaName = Regex("""//\s*@name\s+(.+)""").find(code)?.groupValues?.getOrNull(1)?.trim()
-            val finalName = metaName ?: fileName
-            addScript(UserScript(name = finalName, source = "local file: $fileName", code = code))
-        } catch (e: Exception) {
-            Toast.makeText(this, "Failed to read file: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun addScript(script: UserScript) {
-        val scripts = loadScripts()
-        scripts.add(script)
-        saveScripts(scripts)
-        refreshScriptsList()
-        Toast.makeText(this, R.string.script_added, Toast.LENGTH_SHORT).show()
-    }
-
-    private fun updateScript(index: Int, updated: UserScript) {
-        val scripts = loadScripts()
-        if (index < scripts.size) {
-            scripts[index] = updated
-            saveScripts(scripts)
-            refreshScriptsList()
-            Toast.makeText(this, "Script updated", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    // ── Script persistence ────────────────────────────────────────────────────
 
     data class UserScript(
         var name: String,
@@ -464,32 +74,571 @@ class SettingsActivity : AppCompatActivity() {
         var enabled: Boolean = true
     )
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        prefs = getSharedPreferences("browser_prefs", MODE_PRIVATE)
+        val mode = intent.getStringExtra("SETTINGS_MODE") ?: "GENERAL"
+
+        setContent {
+            MaterialTheme {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    when (mode) {
+                        "AD_BLOCKING" -> AdBlockingScreen()
+                        "SCRIPTS"     -> ScriptsScreen()
+                        else          -> GeneralSettingsScreen()
+                    }
+                }
+            }
+        }
+    }
+
+    // ── General Settings ─────────────────────────────────────────────────────
+
+    @Composable
+    private fun GeneralSettingsScreen() {
+        val currentUrl = prefs.getString(PREF_HOMEPAGE_URL, DEFAULT_HOMEPAGE) ?: DEFAULT_HOMEPAGE
+        val presetIndex = HOMEPAGE_PRESETS.indexOf(currentUrl)
+        var selectedPreset by remember { mutableIntStateOf(if (presetIndex >= 0) presetIndex else HOMEPAGE_PRESETS.size) }
+        var customUrl by remember { mutableStateOf(if (presetIndex < 0) currentUrl else "") }
+        var darkMode by remember { mutableStateOf(prefs.getBoolean(PREF_DARK_MODE, false)) }
+        var clearOnExit by remember { mutableStateOf(prefs.getBoolean(PREF_CLEAR_ON_EXIT, false)) }
+        val focusManager = LocalFocusManager.current
+
+        SettingsScaffold(title = "Settings") {
+            SectionLabel("BROWSER")
+            SectionCard {
+                Text("Default Homepage", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(
+                    "Select or type the URL loaded on new tab",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
+                )
+                val options = HOMEPAGE_PRESETS + "Custom…"
+                var expanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+                    OutlinedTextField(
+                        value = options[selectedPreset],
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        singleLine = true
+                    )
+                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        options.forEachIndexed { idx, label ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    selectedPreset = idx
+                                    expanded = false
+                                    if (idx < HOMEPAGE_PRESETS.size) {
+                                        prefs.edit().putString(PREF_HOMEPAGE_URL, HOMEPAGE_PRESETS[idx]).apply()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+                if (selectedPreset == HOMEPAGE_PRESETS.size) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customUrl,
+                        onValueChange = { customUrl = it },
+                        placeholder = { Text("https://www.google.com") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Uri,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = {
+                            saveCustomHomepage(customUrl)
+                            focusManager.clearFocus()
+                        })
+                    )
+                }
+            }
+
+            SectionLabel("APPEARANCE")
+            SectionCard {
+                SwitchRow(
+                    title = "Dark Mode",
+                    subtitle = "Switch between light and dark theme",
+                    checked = darkMode,
+                    onCheckedChange = {
+                        darkMode = it
+                        prefs.edit().putBoolean(PREF_DARK_MODE, it).apply()
+                        AppCompatDelegate.setDefaultNightMode(
+                            if (it) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+                        )
+                    }
+                )
+            }
+
+            SectionLabel("PRIVACY")
+            SectionCard {
+                SwitchRow(
+                    title = "Clear data on exit",
+                    subtitle = "Clears cache, cookies and history when app is closed",
+                    checked = clearOnExit,
+                    onCheckedChange = {
+                        clearOnExit = it
+                        prefs.edit().putBoolean(PREF_CLEAR_ON_EXIT, it).apply()
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                NavRow(
+                    icon = { Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(22.dp)) },
+                    title = "Clear browsing data now",
+                    onClick = {
+                        setResult(Activity.RESULT_OK, Intent().putExtra("ACTION", "CLEAR_DATA"))
+                        finish()
+                    }
+                )
+            }
+
+            SectionLabel("CONTENT")
+            SectionCard {
+                NavRow(
+                    title = "Ad Blocking",
+                    subtitle = "Block ads and trackers",
+                    onClick = {
+                        startActivity(Intent(this@SettingsActivity, SettingsActivity::class.java)
+                            .putExtra("SETTINGS_MODE", "AD_BLOCKING"))
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                NavRow(
+                    title = "User Scripts",
+                    subtitle = "Manage and run custom scripts on pages",
+                    onClick = {
+                        startActivity(Intent(this@SettingsActivity, SettingsActivity::class.java)
+                            .putExtra("SETTINGS_MODE", "SCRIPTS"))
+                    }
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
+    private fun saveCustomHomepage(url: String) {
+        val final = when {
+            url.isEmpty() -> DEFAULT_HOMEPAGE
+            url.startsWith("http://") || url.startsWith("https://") -> url
+            else -> "https://$url"
+        }
+        prefs.edit().putString(PREF_HOMEPAGE_URL, final).apply()
+    }
+
+    // ── Ad Blocking ──────────────────────────────────────────────────────────
+
+    @Composable
+    private fun AdBlockingScreen() {
+        var adBlocking by remember { mutableStateOf(prefs.getBoolean(PREF_AD_BLOCKING, true)) }
+        var builtFilters by remember { mutableStateOf(prefs.getBoolean(PREF_BUILT_FILTERS, true)) }
+        var expandContent by remember { mutableStateOf(prefs.getBoolean(PREF_EXPAND_CONTENT, true)) }
+
+        SettingsScaffold(title = "Ad Blocking") {
+            SectionLabel("FILTERS")
+            SectionCard {
+                SwitchRow(
+                    title = "Ad blocking",
+                    subtitle = "Block ads and trackers while browsing",
+                    checked = adBlocking,
+                    onCheckedChange = {
+                        adBlocking = it
+                        prefs.edit().putBoolean(PREF_AD_BLOCKING, it).apply()
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                SwitchRow(
+                    title = "Enable built-in filters",
+                    subtitle = "Block common ads using built-in filter lists",
+                    checked = builtFilters,
+                    onCheckedChange = {
+                        builtFilters = it
+                        prefs.edit().putBoolean(PREF_BUILT_FILTERS, it).apply()
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                SwitchRow(
+                    title = "Expand webpage content",
+                    subtitle = "Expand collapsed content automatically on load",
+                    checked = expandContent,
+                    onCheckedChange = {
+                        expandContent = it
+                        prefs.edit().putBoolean(PREF_EXPAND_CONTENT, it).apply()
+                    }
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
+    // ── User Scripts ─────────────────────────────────────────────────────────
+
+    @Composable
+    private fun ScriptsScreen() {
+        var scriptsEnabled by remember { mutableStateOf(prefs.getBoolean(PREF_SCRIPTS_ENABLED, true)) }
+        var scripts by remember { mutableStateOf(loadScripts()) }
+        var showAddDialog by remember { mutableStateOf(false) }
+        var editTarget by remember { mutableStateOf<Pair<Int, UserScript>?>(null) }
+        var deleteTarget by remember { mutableStateOf<Pair<Int, UserScript>?>(null) }
+
+        SettingsScaffold(
+            title = "User Scripts",
+            actions = {
+                IconButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Add script")
+                }
+            }
+        ) {
+            SectionLabel("SETTINGS")
+            SectionCard {
+                SwitchRow(
+                    title = "Enable user scripts",
+                    checked = scriptsEnabled,
+                    onCheckedChange = {
+                        scriptsEnabled = it
+                        prefs.edit().putBoolean(PREF_SCRIPTS_ENABLED, it).apply()
+                    }
+                )
+            }
+
+            SectionLabel("INSTALLED SCRIPTS")
+            if (scripts.isEmpty()) {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text("No user scripts added yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                SectionCard {
+                    scripts.forEachIndexed { index, script ->
+                        if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { editTarget = index to script }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(script.name, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                                Text(
+                                    script.source,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1
+                                )
+                            }
+                            Switch(
+                                checked = script.enabled,
+                                onCheckedChange = { checked ->
+                                    val updated = scripts.toMutableList()
+                                    updated[index] = script.copy(enabled = checked)
+                                    scripts = updated
+                                    saveScripts(updated)
+                                }
+                            )
+                            IconButton(onClick = { deleteTarget = index to script }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        if (showAddDialog) {
+            AddScriptDialog(
+                onDismiss = { showAddDialog = false },
+                onAddText = { showAddDialog = false; AddTextDialog(null, -1, onSave = { s ->
+                    val updated = loadScripts().also { it.add(s) }
+                    saveScripts(updated)
+                    scripts = updated
+                    toast("Script added")
+                }) },
+                onAddFromFile = { showAddDialog = false; filePickerLauncher.launch("text/*") },
+                onAddFromUrl = { showAddDialog = false }
+            )
+        }
+
+        editTarget?.let { (idx, script) ->
+            ScriptEditDialog(
+                script = script,
+                onDismiss = { editTarget = null },
+                onSave = { updated ->
+                    val list = loadScripts().toMutableList()
+                    if (idx < list.size) {
+                        list[idx] = updated
+                        saveScripts(list)
+                        scripts = list
+                        toast("Script updated")
+                    }
+                    editTarget = null
+                },
+                onRefetch = if (script.source.startsWith("http")) ({
+                    fetchScriptFromUrl(script.source, script.name) { fetched ->
+                        val list = loadScripts().toMutableList()
+                        if (idx < list.size) { list[idx] = fetched; saveScripts(list); scripts = list }
+                    }
+                    editTarget = null
+                }) else null
+            )
+        }
+
+        deleteTarget?.let { (idx, script) ->
+            AlertDialog(
+                onDismissRequest = { deleteTarget = null },
+                title = { Text("Delete Script") },
+                text = { Text("Remove \"${script.name}\"?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val list = loadScripts().toMutableList()
+                        if (idx < list.size) { list.removeAt(idx); saveScripts(list); scripts = list }
+                        toast("Script deleted")
+                        deleteTarget = null
+                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Cancel") } }
+            )
+        }
+    }
+
+    // ── Script dialogs ────────────────────────────────────────────────────────
+
+    @Composable
+    private fun AddScriptDialog(
+        onDismiss: () -> Unit,
+        onAddText: () -> Unit,
+        onAddFromFile: () -> Unit,
+        onAddFromUrl: () -> Unit
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Add Script") },
+            text = {
+                Column {
+                    listOf("From URL", "From File", "Enter Script").forEachIndexed { idx, label ->
+                        TextButton(
+                            onClick = { when (idx) { 0 -> onAddFromUrl(); 1 -> onAddFromFile(); else -> onAddText() } },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(label) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        )
+    }
+
+    @Composable
+    private fun ScriptEditDialog(
+        script: UserScript,
+        onDismiss: () -> Unit,
+        onSave: (UserScript) -> Unit,
+        onRefetch: (() -> Unit)?
+    ) {
+        var name by remember { mutableStateOf(script.name) }
+        var code by remember { mutableStateOf(script.code) }
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Edit \"${script.name}\"") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("Code") }, modifier = Modifier.fillMaxWidth().height(160.dp), maxLines = 10)
+                    if (onRefetch != null) {
+                        TextButton(onClick = onRefetch, modifier = Modifier.fillMaxWidth()) { Text("Re-fetch from URL") }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { onSave(script.copy(name = name, code = code)) }) { Text("Save") } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        )
+    }
+
+    // Inline composable helper — shows an add-from-text dialog inline when needed
+    @Composable
+    private fun AddTextDialog(existing: UserScript?, index: Int, onSave: (UserScript) -> Unit) {
+        var name by remember { mutableStateOf(existing?.name ?: "") }
+        var code by remember { mutableStateOf(existing?.code ?: "") }
+        var shown by remember { mutableStateOf(true) }
+        if (!shown) return
+        AlertDialog(
+            onDismissRequest = { shown = false },
+            title = { Text(if (existing != null) "Edit Script" else "Enter Script") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("JavaScript code") }, modifier = Modifier.fillMaxWidth().height(160.dp), maxLines = 10)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (code.isNotBlank()) {
+                        val finalName = name.trim().ifEmpty { "Custom Script" }
+                        onSave(UserScript(name = finalName, source = "text input", code = code.trim()))
+                    }
+                    shown = false
+                }) { Text(if (existing != null) "Save" else "Add") }
+            },
+            dismissButton = { TextButton(onClick = { shown = false }) { Text("Cancel") } }
+        )
+    }
+
+    // ── Script persistence ────────────────────────────────────────────────────
+
     private fun loadScripts(): MutableList<UserScript> {
         val json = prefs.getString(PREF_SCRIPTS_JSON, "[]") ?: "[]"
         return try {
             val arr = JSONArray(json)
             (0 until arr.length()).map { i ->
-                val obj = arr.getJSONObject(i)
-                UserScript(
-                    name    = obj.optString("name", "Script"),
-                    source  = obj.optString("source", ""),
-                    code    = obj.optString("code", ""),
-                    enabled = obj.optBoolean("enabled", true)
-                )
+                val o = arr.getJSONObject(i)
+                UserScript(o.optString("name", "Script"), o.optString("source", ""), o.optString("code", ""), o.optBoolean("enabled", true))
             }.toMutableList()
         } catch (_: Exception) { mutableListOf() }
     }
 
     private fun saveScripts(scripts: List<UserScript>) {
         val arr = JSONArray()
-        scripts.forEach { s ->
-            arr.put(JSONObject().apply {
-                put("name",    s.name)
-                put("source",  s.source)
-                put("code",    s.code)
-                put("enabled", s.enabled)
-            })
-        }
+        scripts.forEach { s -> arr.put(JSONObject().apply { put("name", s.name); put("source", s.source); put("code", s.code); put("enabled", s.enabled) }) }
         prefs.edit().putString(PREF_SCRIPTS_JSON, arr.toString()).apply()
+    }
+
+    private fun fetchScriptFromUrl(url: String, nameHint: String, onDone: (UserScript) -> Unit = {}) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 10_000; readTimeout = 15_000
+                        requestMethod = "GET"; setRequestProperty("User-Agent", "Mozilla/5.0")
+                    }
+                    try {
+                        if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode}")
+                        conn.inputStream.bufferedReader().readText()
+                    } finally { conn.disconnect() }
+                }
+            }
+            result.onSuccess { code ->
+                val meta = Regex("""//\s*@name\s+(.+)""").find(code)?.groupValues?.getOrNull(1)?.trim()
+                val final = nameHint.ifEmpty { meta ?: url.substringAfterLast("/") }
+                val script = UserScript(final, url, code)
+                val list = loadScripts().also { it.add(script) }
+                saveScripts(list)
+                onDone(script)
+                toast("Script added")
+            }.onFailure { toast("Failed: ${it.message}") }
+        }
+    }
+
+    private fun importScriptFromFile(uri: Uri) {
+        try {
+            val code = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return
+            val fileName = uri.lastPathSegment ?: "script.js"
+            val meta = Regex("""//\s*@name\s+(.+)""").find(code)?.groupValues?.getOrNull(1)?.trim()
+            val script = UserScript(meta ?: fileName, "local file: $fileName", code)
+            val list = loadScripts().also { it.add(script) }
+            saveScripts(list)
+            toast("Script added")
+        } catch (e: Exception) {
+            toast("Failed to read file: ${e.message}")
+        }
+    }
+
+    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
+    // ── Shared Compose primitives ─────────────────────────────────────────────
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun SettingsScaffold(
+        title: String,
+        actions: @Composable RowScope.() -> Unit = {},
+        content: @Composable (ColumnScope.() -> Unit)
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(title, fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = { finish() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = actions
+                )
+            }
+        ) { padding ->
+            LazyColumn(
+                contentPadding = PaddingValues(
+                    start = 16.dp, end = 16.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    bottom = padding.calculateBottomPadding() + 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                item { Column { content() } }
+            }
+        }
+    }
+
+    @Composable
+    private fun SectionLabel(text: String) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            letterSpacing = 1.sp,
+            modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 4.dp)
+        )
+    }
+
+    @Composable
+    private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), content = content)
+        }
+    }
+
+    @Composable
+    private fun SwitchRow(title: String, subtitle: String = "", checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                if (subtitle.isNotEmpty()) {
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
+    }
+
+    @Composable
+    private fun NavRow(
+        title: String,
+        subtitle: String = "",
+        icon: (@Composable () -> Unit)? = null,
+        onClick: () -> Unit
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) { Box(modifier = Modifier.padding(end = 12.dp)) { icon() } }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                if (subtitle.isNotEmpty()) {
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+        }
     }
 }
