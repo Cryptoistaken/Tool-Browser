@@ -10,13 +10,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -32,6 +28,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,6 +39,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+@OptIn(ExperimentalMaterial3Api::class)
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var prefs: SharedPreferences
@@ -78,7 +77,6 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("browser_prefs", MODE_PRIVATE)
         val mode = intent.getStringExtra("SETTINGS_MODE") ?: "GENERAL"
-
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -122,7 +120,7 @@ class SettingsActivity : AppCompatActivity() {
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
                         singleLine = true
                     )
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -204,8 +202,10 @@ class SettingsActivity : AppCompatActivity() {
                     title = "Ad Blocking",
                     subtitle = "Block ads and trackers",
                     onClick = {
-                        startActivity(Intent(this@SettingsActivity, SettingsActivity::class.java)
-                            .putExtra("SETTINGS_MODE", "AD_BLOCKING"))
+                        startActivity(
+                            Intent(this@SettingsActivity, SettingsActivity::class.java)
+                                .putExtra("SETTINGS_MODE", "AD_BLOCKING")
+                        )
                     }
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -213,8 +213,10 @@ class SettingsActivity : AppCompatActivity() {
                     title = "User Scripts",
                     subtitle = "Manage and run custom scripts on pages",
                     onClick = {
-                        startActivity(Intent(this@SettingsActivity, SettingsActivity::class.java)
-                            .putExtra("SETTINGS_MODE", "SCRIPTS"))
+                        startActivity(
+                            Intent(this@SettingsActivity, SettingsActivity::class.java)
+                                .putExtra("SETTINGS_MODE", "SCRIPTS")
+                        )
                     }
                 )
             }
@@ -242,35 +244,17 @@ class SettingsActivity : AppCompatActivity() {
         SettingsScaffold(title = "Ad Blocking") {
             SectionLabel("FILTERS")
             SectionCard {
-                SwitchRow(
-                    title = "Ad blocking",
-                    subtitle = "Block ads and trackers while browsing",
-                    checked = adBlocking,
-                    onCheckedChange = {
-                        adBlocking = it
-                        prefs.edit().putBoolean(PREF_AD_BLOCKING, it).apply()
-                    }
-                )
+                SwitchRow("Ad blocking", "Block ads and trackers while browsing", adBlocking) {
+                    adBlocking = it; prefs.edit().putBoolean(PREF_AD_BLOCKING, it).apply()
+                }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                SwitchRow(
-                    title = "Enable built-in filters",
-                    subtitle = "Block common ads using built-in filter lists",
-                    checked = builtFilters,
-                    onCheckedChange = {
-                        builtFilters = it
-                        prefs.edit().putBoolean(PREF_BUILT_FILTERS, it).apply()
-                    }
-                )
+                SwitchRow("Enable built-in filters", "Block common ads using built-in filter lists", builtFilters) {
+                    builtFilters = it; prefs.edit().putBoolean(PREF_BUILT_FILTERS, it).apply()
+                }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                SwitchRow(
-                    title = "Expand webpage content",
-                    subtitle = "Expand collapsed content automatically on load",
-                    checked = expandContent,
-                    onCheckedChange = {
-                        expandContent = it
-                        prefs.edit().putBoolean(PREF_EXPAND_CONTENT, it).apply()
-                    }
-                )
+                SwitchRow("Expand webpage content", "Expand collapsed content automatically on load", expandContent) {
+                    expandContent = it; prefs.edit().putBoolean(PREF_EXPAND_CONTENT, it).apply()
+                }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -282,33 +266,35 @@ class SettingsActivity : AppCompatActivity() {
     private fun ScriptsScreen() {
         var scriptsEnabled by remember { mutableStateOf(prefs.getBoolean(PREF_SCRIPTS_ENABLED, true)) }
         var scripts by remember { mutableStateOf(loadScripts()) }
-        var showAddDialog by remember { mutableStateOf(false) }
+
+        // Dialog state — all booleans/targets hoisted here so dialogs stay in Compose tree
+        var showPickerDialog by remember { mutableStateOf(false) }
+        var showAddTextDialog by remember { mutableStateOf(false) }
         var editTarget by remember { mutableStateOf<Pair<Int, UserScript>?>(null) }
         var deleteTarget by remember { mutableStateOf<Pair<Int, UserScript>?>(null) }
 
         SettingsScaffold(
             title = "User Scripts",
             actions = {
-                IconButton(onClick = { showAddDialog = true }) {
+                IconButton(onClick = { showPickerDialog = true }) {
                     Icon(Icons.Default.Add, contentDescription = "Add script")
                 }
             }
         ) {
             SectionLabel("SETTINGS")
             SectionCard {
-                SwitchRow(
-                    title = "Enable user scripts",
-                    checked = scriptsEnabled,
-                    onCheckedChange = {
-                        scriptsEnabled = it
-                        prefs.edit().putBoolean(PREF_SCRIPTS_ENABLED, it).apply()
-                    }
-                )
+                SwitchRow("Enable user scripts", checked = scriptsEnabled) {
+                    scriptsEnabled = it
+                    prefs.edit().putBoolean(PREF_SCRIPTS_ENABLED, it).apply()
+                }
             }
 
             SectionLabel("INSTALLED SCRIPTS")
             if (scripts.isEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text("No user scripts added yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
@@ -341,7 +327,8 @@ class SettingsActivity : AppCompatActivity() {
                                 }
                             )
                             IconButton(onClick = { deleteTarget = index to script }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                Icon(Icons.Default.Delete, contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -350,17 +337,28 @@ class SettingsActivity : AppCompatActivity() {
             Spacer(Modifier.height(24.dp))
         }
 
-        if (showAddDialog) {
-            AddScriptDialog(
-                onDismiss = { showAddDialog = false },
-                onAddText = { showAddDialog = false; AddTextDialog(null, -1, onSave = { s ->
+        // ── Dialogs (always in Compose tree, shown via state) ─────────────────
+
+        if (showPickerDialog) {
+            AddScriptPickerDialog(
+                onDismiss = { showPickerDialog = false },
+                onAddText = { showPickerDialog = false; showAddTextDialog = true },
+                onAddFromFile = { showPickerDialog = false; filePickerLauncher.launch("text/*") },
+                onAddFromUrl = { showPickerDialog = false }
+            )
+        }
+
+        if (showAddTextDialog) {
+            ScriptTextDialog(
+                existing = null,
+                onDismiss = { showAddTextDialog = false },
+                onSave = { s ->
                     val updated = loadScripts().also { it.add(s) }
                     saveScripts(updated)
                     scripts = updated
                     toast("Script added")
-                }) },
-                onAddFromFile = { showAddDialog = false; filePickerLauncher.launch("text/*") },
-                onAddFromUrl = { showAddDialog = false }
+                    showAddTextDialog = false
+                }
             )
         }
 
@@ -370,12 +368,7 @@ class SettingsActivity : AppCompatActivity() {
                 onDismiss = { editTarget = null },
                 onSave = { updated ->
                     val list = loadScripts().toMutableList()
-                    if (idx < list.size) {
-                        list[idx] = updated
-                        saveScripts(list)
-                        scripts = list
-                        toast("Script updated")
-                    }
+                    if (idx < list.size) { list[idx] = updated; saveScripts(list); scripts = list; toast("Script updated") }
                     editTarget = null
                 },
                 onRefetch = if (script.source.startsWith("http")) ({
@@ -409,7 +402,7 @@ class SettingsActivity : AppCompatActivity() {
     // ── Script dialogs ────────────────────────────────────────────────────────
 
     @Composable
-    private fun AddScriptDialog(
+    private fun AddScriptPickerDialog(
         onDismiss: () -> Unit,
         onAddText: () -> Unit,
         onAddFromFile: () -> Unit,
@@ -434,6 +427,37 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     @Composable
+    private fun ScriptTextDialog(
+        existing: UserScript?,
+        onDismiss: () -> Unit,
+        onSave: (UserScript) -> Unit
+    ) {
+        var name by remember { mutableStateOf(existing?.name ?: "") }
+        var code by remember { mutableStateOf(existing?.code ?: "") }
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(if (existing != null) "Edit Script" else "Enter Script") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = name, onValueChange = { name = it },
+                        label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = code, onValueChange = { code = it },
+                        label = { Text("JavaScript code") },
+                        modifier = Modifier.fillMaxWidth().height(160.dp), maxLines = 10)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (code.isNotBlank()) {
+                        onSave(UserScript(name.trim().ifEmpty { "Custom Script" }, "text input", code.trim()))
+                    }
+                }) { Text(if (existing != null) "Save" else "Add") }
+            },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        )
+    }
+
+    @Composable
     private fun ScriptEditDialog(
         script: UserScript,
         onDismiss: () -> Unit,
@@ -442,50 +466,27 @@ class SettingsActivity : AppCompatActivity() {
     ) {
         var name by remember { mutableStateOf(script.name) }
         var code by remember { mutableStateOf(script.code) }
-
         AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Edit \"${script.name}\"") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("Code") }, modifier = Modifier.fillMaxWidth().height(160.dp), maxLines = 10)
+                    OutlinedTextField(value = name, onValueChange = { name = it },
+                        label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = code, onValueChange = { code = it },
+                        label = { Text("Code") },
+                        modifier = Modifier.fillMaxWidth().height(160.dp), maxLines = 10)
                     if (onRefetch != null) {
-                        TextButton(onClick = onRefetch, modifier = Modifier.fillMaxWidth()) { Text("Re-fetch from URL") }
+                        TextButton(onClick = onRefetch, modifier = Modifier.fillMaxWidth()) {
+                            Text("Re-fetch from URL")
+                        }
                     }
-                }
-            },
-            confirmButton = { TextButton(onClick = { onSave(script.copy(name = name, code = code)) }) { Text("Save") } },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-        )
-    }
-
-    // Inline composable helper — shows an add-from-text dialog inline when needed
-    @Composable
-    private fun AddTextDialog(existing: UserScript?, index: Int, onSave: (UserScript) -> Unit) {
-        var name by remember { mutableStateOf(existing?.name ?: "") }
-        var code by remember { mutableStateOf(existing?.code ?: "") }
-        var shown by remember { mutableStateOf(true) }
-        if (!shown) return
-        AlertDialog(
-            onDismissRequest = { shown = false },
-            title = { Text(if (existing != null) "Edit Script" else "Enter Script") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("JavaScript code") }, modifier = Modifier.fillMaxWidth().height(160.dp), maxLines = 10)
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    if (code.isNotBlank()) {
-                        val finalName = name.trim().ifEmpty { "Custom Script" }
-                        onSave(UserScript(name = finalName, source = "text input", code = code.trim()))
-                    }
-                    shown = false
-                }) { Text(if (existing != null) "Save" else "Add") }
+                TextButton(onClick = { onSave(script.copy(name = name, code = code)) }) { Text("Save") }
             },
-            dismissButton = { TextButton(onClick = { shown = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
         )
     }
 
@@ -497,14 +498,20 @@ class SettingsActivity : AppCompatActivity() {
             val arr = JSONArray(json)
             (0 until arr.length()).map { i ->
                 val o = arr.getJSONObject(i)
-                UserScript(o.optString("name", "Script"), o.optString("source", ""), o.optString("code", ""), o.optBoolean("enabled", true))
+                UserScript(o.optString("name", "Script"), o.optString("source", ""),
+                    o.optString("code", ""), o.optBoolean("enabled", true))
             }.toMutableList()
         } catch (_: Exception) { mutableListOf() }
     }
 
     private fun saveScripts(scripts: List<UserScript>) {
         val arr = JSONArray()
-        scripts.forEach { s -> arr.put(JSONObject().apply { put("name", s.name); put("source", s.source); put("code", s.code); put("enabled", s.enabled) }) }
+        scripts.forEach { s ->
+            arr.put(JSONObject().apply {
+                put("name", s.name); put("source", s.source)
+                put("code", s.code); put("enabled", s.enabled)
+            })
+        }
         prefs.edit().putString(PREF_SCRIPTS_JSON, arr.toString()).apply()
     }
 
@@ -524,12 +531,9 @@ class SettingsActivity : AppCompatActivity() {
             }
             result.onSuccess { code ->
                 val meta = Regex("""//\s*@name\s+(.+)""").find(code)?.groupValues?.getOrNull(1)?.trim()
-                val final = nameHint.ifEmpty { meta ?: url.substringAfterLast("/") }
-                val script = UserScript(final, url, code)
+                val script = UserScript(nameHint.ifEmpty { meta ?: url.substringAfterLast("/") }, url, code)
                 val list = loadScripts().also { it.add(script) }
-                saveScripts(list)
-                onDone(script)
-                toast("Script added")
+                saveScripts(list); onDone(script); toast("Script added")
             }.onFailure { toast("Failed: ${it.message}") }
         }
     }
@@ -541,23 +545,19 @@ class SettingsActivity : AppCompatActivity() {
             val meta = Regex("""//\s*@name\s+(.+)""").find(code)?.groupValues?.getOrNull(1)?.trim()
             val script = UserScript(meta ?: fileName, "local file: $fileName", code)
             val list = loadScripts().also { it.add(script) }
-            saveScripts(list)
-            toast("Script added")
-        } catch (e: Exception) {
-            toast("Failed to read file: ${e.message}")
-        }
+            saveScripts(list); toast("Script added")
+        } catch (e: Exception) { toast("Failed to read file: ${e.message}") }
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 
     // ── Shared Compose primitives ─────────────────────────────────────────────
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun SettingsScaffold(
         title: String,
         actions: @Composable RowScope.() -> Unit = {},
-        content: @Composable (ColumnScope.() -> Unit)
+        content: @Composable ColumnScope.() -> Unit
     ) {
         Scaffold(
             topBar = {
@@ -605,7 +605,12 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     @Composable
-    private fun SwitchRow(title: String, subtitle: String = "", checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    private fun SwitchRow(
+        title: String,
+        subtitle: String = "",
+        checked: Boolean,
+        onCheckedChange: (Boolean) -> Unit
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -613,7 +618,9 @@ class SettingsActivity : AppCompatActivity() {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                 Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 if (subtitle.isNotEmpty()) {
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp))
                 }
             }
             Switch(checked = checked, onCheckedChange = onCheckedChange)
@@ -635,10 +642,13 @@ class SettingsActivity : AppCompatActivity() {
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 if (subtitle.isNotEmpty()) {
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp))
                 }
             }
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
         }
     }
 }
