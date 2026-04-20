@@ -32,10 +32,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
@@ -47,6 +49,7 @@ import com.personal.browser.R
 import com.personal.browser.data.model.Bookmark
 import com.personal.browser.data.model.HistoryEntry
 import com.personal.browser.ui.screens.BookmarksSheet
+import com.personal.browser.ui.screens.BrowserToolbar
 import com.personal.browser.ui.screens.HistorySheet
 import com.personal.browser.ui.screens.TabsSheet
 import com.personal.browser.ui.viewmodel.BrowserViewModel
@@ -144,26 +147,52 @@ class MainActivity : AppCompatActivity() {
         val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
         val history by viewModel.history.collectAsStateWithLifecycle()
 
+        val activeTab = tabs.getOrNull(activeTabIndex)
+
         var showTabs by remember { mutableStateOf(false) }
         var showBookmarks by remember { mutableStateOf(false) }
         var showHistory by remember { mutableStateOf(false) }
 
-        // Drive WebView switching from Compose state
         LaunchedEffect(activeTabIndex, tabs) {
             val tab = tabs.getOrNull(activeTabIndex) ?: return@LaunchedEffect
             switchToTab(tab.id, tab.url)
         }
 
-        Surface(modifier = Modifier.fillMaxSize()) {
-            // The actual WebView is rendered in the FrameLayout behind Compose.
-            // We use AndroidView as a transparent bridge to keep the Compose tree valid.
-            AndroidView(
-                factory = { webViewContainer },
-                modifier = Modifier.fillMaxSize()
-            )
+        Scaffold(
+            topBar = {
+                BrowserToolbar(
+                    url = activeTab?.url ?: "",
+                    title = activeTab?.title ?: "",
+                    isLoading = activeTab?.isLoading ?: false,
+                    progress = activeTab?.progress ?: 0,
+                    canGoBack = activeTab?.canGoBack ?: false,
+                    canGoForward = activeTab?.canGoForward ?: false,
+                    isBookmarked = isBookmarked,
+                    tabCount = tabs.size,
+                    onNavigateBack = { currentWebView?.goBack() },
+                    onNavigateForward = { currentWebView?.goForward() },
+                    onRefresh = { currentWebView?.reload() },
+                    onStop = { currentWebView?.stopLoading() },
+                    onUrlSubmit = { loadUrl(UrlUtils.processInput(it)) },
+                    onBookmarkToggle = { viewModel.toggleBookmark() },
+                    onTabsClick = { showTabs = true },
+                    onBookmarksClick = { showBookmarks = true },
+                    onHistoryClick = { showHistory = true },
+                    onSettingsClick = {
+                        settingsLauncher.launch(Intent(this@MainActivity, SettingsActivity::class.java))
+                    },
+                    onNewTab = { viewModel.openNewTab(getHomepageUrl()) }
+                )
+            }
+        ) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                AndroidView(
+                    factory = { webViewContainer },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
 
-        // ── Tabs bottom sheet ─────────────────────────────────────────────────
         if (showTabs) {
             ModalBottomSheet(
                 onDismissRequest = { showTabs = false },
@@ -179,7 +208,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ── Bookmarks bottom sheet ────────────────────────────────────────────
         if (showBookmarks) {
             ModalBottomSheet(
                 onDismissRequest = { showBookmarks = false },
@@ -193,7 +221,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ── History bottom sheet ──────────────────────────────────────────────
         if (showHistory) {
             ModalBottomSheet(
                 onDismissRequest = { showHistory = false },
@@ -259,6 +286,7 @@ class MainActivity : AppCompatActivity() {
                     injectScripts(view)
                     if (this@apply === currentWebView) {
                         viewModel.onPageFinished(url, view.title)
+                        viewModel.onNavigationStateChanged(view.canGoBack(), view.canGoForward())
                     }
                 }
                 override fun shouldInterceptRequest(
